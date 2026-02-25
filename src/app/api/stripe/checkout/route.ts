@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json(
+      { error: "Stripe is not configured" },
+      { status: 503 }
+    );
+  }
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -43,7 +51,7 @@ export async function POST(req: Request) {
 
     const origin = req.headers.get("origin") ?? "http://localhost:3000";
 
-    const stripeSession = await stripe.checkout.sessions.create({
+    const stripeSession = await getStripe().checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: [
