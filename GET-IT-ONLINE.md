@@ -31,11 +31,14 @@ git init
 git add .
 git commit -m "First commit"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/paris-tallinn-voistlus.git
+git remote remove origin
+git remote add origin https://github.com/stivenraidmets-glitch/Sisuloojad-euroopas.git
 git push -u origin main
 ```
 
-When it asks for username/password, use your **GitHub username** and a **Personal Access Token** (not your normal password). To create one: GitHub → Settings → Developer settings → Personal access tokens → Generate new token. Give it “repo” and push the code.
+**If Git asks for a password:** GitHub no longer accepts your account password. You must use a **Personal Access Token**:
+1. On GitHub: your profile picture (top right) → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)** → **Generate new token (classic)**. Name it e.g. “push”, tick **repo**, then **Generate**. Copy the token (starts with `ghp_`).
+2. When Terminal asks for “Password:”, **paste that token** (nothing will show as you paste). Press Enter. Username is `stivenraidmets-glitch`.
 
 ---
 
