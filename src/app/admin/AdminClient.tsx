@@ -178,8 +178,8 @@ function SetTeamLocation({
   currentLat: number | null;
   currentLng: number | null;
 }) {
-  const [lat, setLat] = useState(currentLat ?? 48.8566);
-  const [lng, setLng] = useState(currentLng ?? 2.3522);
+  const [lat, setLat] = useState<number | null>(currentLat ?? 48.8566);
+  const [lng, setLng] = useState<number | null>(currentLng ?? 2.3522);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
