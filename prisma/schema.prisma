@@ -1,20 +1,14 @@
 // Paris → Tallinn Race - Prisma schema
-// Compatible with PostgreSQL; use SQLite locally via DATABASE_URL="file:./dev.db"
+// PostgreSQL (Neon, etc.). Set DATABASE_URL in Vercel and locally.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// For PostgreSQL in production, switch to:
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
 
 model User {
   id             String    @id @default(cuid())

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { Suspense, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const BROADCAST_INTERVAL_MS = 30000; // 30 seconds
 
-export default function BroadcastPage() {
+function BroadcastContent() {
   const [teamId, setTeamId] = useState<1 | 2>(1);
   const [sharing, setSharing] = useState(false);
   const [lastSent, setLastSent] = useState<Date | null>(null);
@@ -114,5 +114,13 @@ export default function BroadcastPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function BroadcastPage() {
+  return (
+    <Suspense fallback={<div className="container max-w-md px-4 py-8">Laen…</div>}>
+      <BroadcastContent />
+    </Suspense>
   );
 }

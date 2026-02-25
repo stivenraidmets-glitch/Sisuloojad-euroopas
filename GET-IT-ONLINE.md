@@ -7,6 +7,21 @@ Later you can add a custom domain (e.g. zone.ee) if you want.
 
 ---
 
+## Step-by-step checklist (do in order)
+
+| Step | What to do |
+|------|------------|
+| **1** | Create a GitHub repo and push your code (see Step 1 below). |
+| **2** | Create a Neon project at neon.tech and copy the **connection string** (DATABASE_URL). |
+| **3** | In Vercel: Import the repo, add all **Environment Variables** (Step 3 table), then click **Deploy**. |
+| **4** | In Terminal: set `DATABASE_URL` to your Neon URL, run `npx prisma db push` then `npx prisma db seed` (Step 4). |
+| **5** | Set **NEXTAUTH_URL** in Vercel to your exact live URL (e.g. `https://your-project.vercel.app`), then **Redeploy** (Step 5). |
+| **6** | Open your site; use `/broadcast?secret=YOUR_BROADCAST_SECRET` to share location. |
+
+If anything fails, check **Troubleshooting** at the bottom.
+
+---
+
 ## What you need
 
 - A **GitHub** account (free): https://github.com/join  
@@ -80,51 +95,47 @@ You can add **Stripe** and **Pusher** later; the site will work without them (ma
 
 ---
 
-## Step 4: Use Postgres and run the database setup
+## Step 4: Create tables and seed data in Neon
 
-Your app is built for PostgreSQL on Vercel. We need to tell the app to use Postgres (not SQLite) and create the tables.
+The app is already set to use PostgreSQL. You only need to create the tables and seed data in your Neon database **once**.
 
-1. In your **project folder** on your computer, open **prisma/schema.prisma** in a text editor.
-2. Find this block (near the top):
-
-   ```
-   datasource db {
-     provider = "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-
-   Replace it with this (so the app uses Neon Postgres in production):
-
-   ```
-   datasource db {
-     provider = "postgresql"
-     url      = env("DATABASE_URL")
-   }
-   ```
-
-   Save the file. Leave everything else in the file as is.
-
-3. In Terminal, set your Neon URL once (replace with your real URL):
+1. Open **Terminal** and go to your project folder.
+2. Set your Neon connection string (paste the **exact** URL from Neon; it usually ends with `?sslmode=require`):
 
 ```bash
 cd "/Users/stivenraidmets/euroopa website"
-export DATABASE_URL="postgresql://....your-neon-url....?sslmode=require"
+export DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
+```
+
+(Replace the whole `postgresql://...` part with what you copied from Neon.)
+
+3. Create the tables:
+
+```bash
 npx prisma db push
+```
+
+You should see something like: “Database is now in sync with your schema.”
+
+4. Add the default teams and options (seed):
+
+```bash
 npx prisma db seed
 ```
 
-**Tip:** For local development, put the same Neon **DATABASE_URL** in your `.env.local` so the app uses the same database everywhere. (Or you can keep using SQLite locally by reverting the `provider` back to `sqlite` and using `DATABASE_URL="file:./dev.db"` only in `.env.local`—but then you’d have two different databases.)
+You should see: “Seed completed” or similar.
 
-4. Commit and push so Vercel uses Postgres too:
+5. **Optional:** Put the same `DATABASE_URL` in a file named `.env` or `.env.local` in your project folder (one line: `DATABASE_URL="postgresql://..."`) so local `npm run dev` uses the same database.
+
+6. If you changed any code, commit and push so Vercel has the latest:
 
 ```bash
-git add prisma/schema.prisma
-git commit -m "Use PostgreSQL for production"
+git add .
+git commit -m "Deploy with Postgres"
 git push
 ```
 
-Vercel will redeploy automatically. After 1–2 minutes, open your **.vercel.app** link again.
+Vercel will redeploy automatically. After 1–2 minutes, open your **.vercel.app** link.
 
 ---
 
