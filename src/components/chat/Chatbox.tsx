@@ -18,7 +18,7 @@ export function Chatbox() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLUListElement>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -38,7 +38,8 @@ export function Chatbox() {
   }, [status, fetchMessages]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesEndRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -71,7 +72,7 @@ export function Chatbox() {
         <h2 className="font-semibold text-sm">Vestlus</h2>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 text-sm">
+        <ul ref={messagesEndRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 text-sm">
           {messages.length === 0 && (
             <li className="text-muted-foreground py-4 text-center text-xs">
               Siin pole veel sõnumeid. Alusta vestlust!
@@ -91,7 +92,6 @@ export function Chatbox() {
               <p className="mt-0.5 break-words">{m.body}</p>
             </li>
           ))}
-          <div ref={bottomRef} />
         </ul>
         <form onSubmit={handleSubmit} className="flex shrink-0 gap-2 border-t p-2">
           <Input
