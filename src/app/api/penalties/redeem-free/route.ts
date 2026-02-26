@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { notifyPenaltyToChat } from "@/lib/chat-notify";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +66,14 @@ export async function POST(req: Request) {
       },
     });
 
+    const now = new Date();
     await prisma.penalty.create({
       data: {
         teamId,
         penaltyOptionId: option.id,
         purchasedByUserId: user.id,
-        status: "PENDING",
+        status: "ACTIVE",
+        startsAt: now,
         purchaseId: purchase.id,
       },
     });
@@ -79,6 +82,12 @@ export async function POST(req: Request) {
       where: { userId: user.id },
       data: { redeemedAt: new Date() },
     });
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { name: true },
+    });
+    if (team) await notifyPenaltyToChat(team.name, option.title, true);
 
     return NextResponse.json({ success: true });
   } catch (e) {

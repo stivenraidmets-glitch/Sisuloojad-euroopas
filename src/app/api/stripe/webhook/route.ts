@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
+import { notifyPenaltyToChat } from "@/lib/chat-notify";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,15 @@ export async function POST(req: Request) {
         session.metadata?.penaltyOptionId ?? purchase.penaltyOptionId;
 
       if (teamId && penaltyOptionId) {
+        const option = await prisma.penaltyOption.findUnique({
+          where: { id: penaltyOptionId },
+          select: { title: true },
+        });
+        const team = await prisma.team.findUnique({
+          where: { id: teamId },
+          select: { name: true },
+        });
+        const now = new Date();
         await prisma.$transaction([
           prisma.purchase.update({
             where: { id: purchase.id },
@@ -51,11 +61,15 @@ export async function POST(req: Request) {
               teamId,
               penaltyOptionId,
               purchasedByUserId: userId,
-              status: "PENDING",
+              status: "ACTIVE",
+              startsAt: now,
               purchaseId: purchase.id,
             },
           }),
         ]);
+        if (team && option) {
+          await notifyPenaltyToChat(team.name, option.title, true);
+        }
       } else {
         await prisma.purchase.update({
           where: { id: purchase.id },

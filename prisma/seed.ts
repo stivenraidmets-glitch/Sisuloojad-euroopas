@@ -81,7 +81,18 @@ async function main() {
     create: { id: "default", outcomesJson: defaultWheelOutcomes },
   });
 
-  console.log("Seed completed: teams, penalty options, race status, wheel config.");
+  await prisma.user.upsert({
+    where: { email: "system@voistlus.internal" },
+    update: {},
+    create: {
+      email: "system@voistlus.internal",
+      name: "Süsteem",
+      creditsBalance: 0,
+      hasSpunWheel: true,
+    },
+  });
+
+  console.log("Seed completed: teams, penalty options, race status, wheel config, system user.");
 }
 
 main()

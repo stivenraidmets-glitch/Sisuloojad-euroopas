@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { notifyPenaltyToChat } from "@/lib/chat-notify";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -23,6 +24,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
+  const penalty = await prisma.penalty.findUnique({
+    where: { id: penaltyId },
+    include: { team: true, penaltyOption: true },
+  });
+  if (!penalty) {
+    return NextResponse.json({ error: "Penalty not found" }, { status: 404 });
+  }
+
   await prisma.penalty.update({
     where: { id: penaltyId },
     data: {
@@ -31,5 +40,14 @@ export async function PATCH(req: Request) {
       ...(status === "COMPLETED" ? { enforcedAt: new Date() } : {}),
     },
   });
+
+  if (status === "ACTIVE") {
+    await notifyPenaltyToChat(
+      penalty.team.name,
+      penalty.penaltyOption.title,
+      true
+    );
+  }
+
   return NextResponse.json({ success: true });
 }

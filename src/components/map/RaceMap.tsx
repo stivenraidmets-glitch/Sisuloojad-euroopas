@@ -17,6 +17,13 @@ const DEFAULT_POSITIONS: Record<number, [number, number]> = {
   2: [59.437, 24.7536],   // Tallinn
 };
 
+type ActivePenalty = {
+  title: string;
+  type: string;
+  endsAt: string;
+  durationMinutes: number;
+};
+
 type TeamState = {
   teamId: number;
   name: string;
@@ -24,13 +31,24 @@ type TeamState = {
   lat: number;
   lng: number;
   lastUpdatedAt: Date | null;
+  activePenalty: ActivePenalty | null;
 };
 
 type RaceMapProps = {
-  teams: { id: number; name: string; color: string; lastLat: number | null; lastLng: number | null; lastUpdatedAt: Date | null }[];
+  teams: {
+    id: number;
+    name: string;
+    color: string;
+    lastLat: number | null;
+    lastLng: number | null;
+    lastUpdatedAt: Date | null;
+    activePenalty?: ActivePenalty | null;
+  }[];
   channelName?: string;
   accessToken: string;
 };
+
+const FROZEN_COLOR = "#93c5fd"; // ice blue for active penalty
 
 export function RaceMap({
   teams: initialTeams,
@@ -51,9 +69,11 @@ export function RaceMap({
         lat: hasBroadcast ? t.lastLat! : (defaultPos?.[0] ?? 0),
         lng: hasBroadcast ? t.lastLng! : (defaultPos?.[1] ?? 0),
         lastUpdatedAt: t.lastUpdatedAt,
+        activePenalty: t.activePenalty ?? null,
       };
     })
   );
+  const [now, setNow] = useState(() => new Date());
 
   const initMap = useCallback(() => {
     if (!mapRef.current || !accessToken) return;
@@ -117,9 +137,10 @@ export function RaceMap({
             const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
             const defaultPos = DEFAULT_POSITIONS[t.teamId];
             if (!fromApi) return t;
+            const next = { ...t, activePenalty: fromApi.activePenalty ?? null };
             if (fromApi.lastLat != null && fromApi.lastLng != null) {
               return {
-                ...t,
+                ...next,
                 lat: fromApi.lastLat,
                 lng: fromApi.lastLng,
                 lastUpdatedAt: fromApi.lastUpdatedAt
@@ -127,9 +148,8 @@ export function RaceMap({
                   : t.lastUpdatedAt,
               };
             }
-            // No broadcast yet: keep last known or show default start position
             return {
-              ...t,
+              ...next,
               lat: defaultPos?.[0] ?? t.lat,
               lng: defaultPos?.[1] ?? t.lng,
             };
@@ -145,7 +165,15 @@ export function RaceMap({
     };
   }, []);
 
-  // Draw team positions as map layers (GeoJSON circles) – drawn by the map so positions are always correct
+  // Countdown ticker for penalty timers
+  useEffect(() => {
+    const hasActive = teams.some((t) => t.activePenalty != null);
+    if (!hasActive) return;
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, [teams]);
+
+  // Draw team positions as map layers – frozen teams get ice-blue circle
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
@@ -164,9 +192,13 @@ export function RaceMap({
         (lat === 0 && lng === 0)
       )
         return;
+      const isFrozen = t.activePenalty != null;
       features.push({
         type: "Feature",
-        properties: { teamId: t.teamId, color: t.color },
+        properties: {
+          teamId: t.teamId,
+          color: isFrozen ? FROZEN_COLOR : t.color,
+        },
         geometry: { type: "Point", coordinates: [lng, lat] },
       });
     });
@@ -213,6 +245,16 @@ export function RaceMap({
     );
   }
 
+  function formatRemaining(endsAt: string): string {
+    const end = new Date(endsAt).getTime();
+    const secs = Math.max(0, Math.floor((end - now.getTime()) / 1000));
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+
+  const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
+
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10">
       <div ref={mapRef} className="h-[400px] w-full" />
@@ -221,8 +263,26 @@ export function RaceMap({
           <p className="text-muted-foreground">Ootame meeskondade asukohte…</p>
         </div>
       )}
+      {teamsWithPenalty.length > 0 && (
+        <div className="absolute left-2 right-2 top-2 flex flex-wrap gap-2">
+          {teamsWithPenalty.map((t) => (
+            <span
+              key={t.teamId}
+              className="inline-flex items-center gap-1.5 rounded bg-background/90 px-2 py-1 text-xs font-medium backdrop-blur"
+              title={t.activePenalty!.title}
+            >
+              <span className="text-base" aria-hidden>❄️</span>
+              <span className="truncate">{t.name}:</span>
+              <span className="text-primary">
+                {t.activePenalty!.title} ({formatRemaining(t.activePenalty!.endsAt)})
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
       <p className="absolute bottom-2 left-2 right-2 rounded bg-background/80 px-2 py-1 text-center text-xs text-muted-foreground backdrop-blur">
         Täpid: viimane teadaolev asukoht (või stardipunkt Pariis/Tallinn, kui asukohta veel jagatud pole).
+        {teamsWithPenalty.length > 0 && " Sinine täpp = karistus aktiivne."}
       </p>
     </div>
   );
