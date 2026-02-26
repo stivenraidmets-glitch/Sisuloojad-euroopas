@@ -34,10 +34,24 @@ async function getRecentPenalties() {
 }
 
 export default async function HomePage() {
-  const [teams, recentPenalties] = await Promise.all([
-    getTeams(),
-    getRecentPenalties(),
-  ]);
+  let teams: Awaited<ReturnType<typeof getTeams>>;
+  let recentPenalties: Awaited<ReturnType<typeof getRecentPenalties>>;
+  try {
+    [teams, recentPenalties] = await Promise.all([
+      getTeams(),
+      getRecentPenalties(),
+    ]);
+  } catch (e) {
+    console.error("Home page data error:", e);
+    return (
+      <div className="container space-y-6 px-4 py-12">
+        <h1 className="text-2xl font-bold">Paris → Tallinn võistlus</h1>
+        <p className="text-muted-foreground">
+          Andmebaas pole hetkel saadaval. Kontrolli Vercel-is, et DATABASE_URL on õige ja andmebaas on üleval.
+        </p>
+      </div>
+    );
+  }
 
   const team1 = teams[0];
   const team2 = teams[1];
@@ -69,8 +83,8 @@ export default async function HomePage() {
         team2Name={team2Name}
         recentPenalties={recentPenalties.map((p) => ({
           id: p.id,
-          teamName: p.team.name,
-          title: p.penaltyOption.title,
+          teamName: p.team?.name ?? "—",
+          title: p.penaltyOption?.title ?? "—",
           status: p.status,
           createdAt: p.createdAt.toISOString(),
         }))}
@@ -90,7 +104,7 @@ export default async function HomePage() {
                 recentPenalties.map((p) => (
                   <li key={p.id} className="flex justify-between text-sm">
                     <span>
-                      <strong>{p.penaltyOption.title}</strong> → {p.team.name}
+                      <strong>{p.penaltyOption?.title ?? "—"}</strong> → {p.team?.name ?? "—"}
                     </span>
                     <span className="text-muted-foreground">
                       {p.status} · {p.createdAt.toLocaleString()}

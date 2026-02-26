@@ -84,7 +84,7 @@ git push -u origin main
 | `NEXTAUTH_SECRET` | Any long random string, e.g. paste from https://generate-secret.vercel.app/32 |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Your Mapbox token (pk.eyJ...) |
 | `ADMIN_EMAILS` | Your email, e.g. stivenraidmets@gmail.com |
-| `BROADCAST_SECRET` | A secret word only you know, e.g. my-broadcast-secret-2024 |
+| `BROADCAST_SECRET` | Optional. A secret word for the broadcast URL. If not set, use `?secret=broadcast` in the broadcast link. |
 | `ENABLE_DEV_LOGIN` | Leave empty (delete or leave blank in production) |
 | `NEXT_PUBLIC_ENABLE_DEV_LOGIN` | Leave empty |
 
@@ -153,8 +153,8 @@ Vercel will redeploy automatically. After 1–2 minutes, open your **.vercel.app
 
 - **Visit:** https://your-project-name.vercel.app  
 - **Broadcast from phone:** use the same URL:  
-  `https://your-project-name.vercel.app/broadcast?secret=MY_BROADCAST_SECRET`  
-  (use the same secret you put in `BROADCAST_SECRET`).
+  `https://your-project-name.vercel.app/broadcast?secret=MY_SECRET`  
+  If you didn’t set `BROADCAST_SECRET` in Vercel, use `?secret=broadcast`. Otherwise use the same value as `BROADCAST_SECRET`.
 
 Share the main link with visitors; they can vote, watch the map, and spin the wheel.
 
@@ -182,5 +182,6 @@ You keep hosting on Vercel; the domain just points to it. No need to pay for Zon
 | Login doesn’t work | Set **NEXTAUTH_URL** in Vercel to your exact live URL (with https://). Redeploy. |
 | Map doesn’t show | Add **NEXT_PUBLIC_MAPBOX_TOKEN** in Vercel env vars and redeploy. |
 | 500 error on first open | Often the database: run `prisma db push` and `prisma db seed` with Neon URL, then push and redeploy. |
+| “Application error: a server-side exception” | Set **NEXTAUTH_SECRET** (long random string, e.g. from https://generate-secret.vercel.app/32) and **NEXTAUTH_URL** (your exact site URL) in Vercel. Redeploy. |
 
 If something doesn’t work, copy the error message (from the browser or Vercel deployment log) and ask for help—mention you followed GET-IT-ONLINE.md.

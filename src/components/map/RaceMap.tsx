@@ -11,6 +11,12 @@ const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
 const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
 
+// Default positions when no location has been broadcast yet (Paris → Tallinn race)
+const DEFAULT_POSITIONS: Record<number, [number, number]> = {
+  1: [48.8566, 2.3522],   // Paris
+  2: [59.437, 24.7536],   // Tallinn
+};
+
 type TeamState = {
   teamId: number;
   name: string;
@@ -35,14 +41,18 @@ export function RaceMap({
   const mapInstance = useRef<mapboxgl.Map | null>(null);
 
   const [teams, setTeams] = useState<TeamState[]>(
-    initialTeams.map((t) => ({
-      teamId: t.id,
-      name: t.name,
-      color: t.color,
-      lat: t.lastLat ?? 0,
-      lng: t.lastLng ?? 0,
-      lastUpdatedAt: t.lastUpdatedAt,
-    }))
+    initialTeams.map((t) => {
+      const defaultPos = DEFAULT_POSITIONS[t.id];
+      const hasBroadcast = t.lastLat != null && t.lastLng != null;
+      return {
+        teamId: t.id,
+        name: t.name,
+        color: t.color,
+        lat: hasBroadcast ? t.lastLat! : (defaultPos?.[0] ?? 0),
+        lng: hasBroadcast ? t.lastLng! : (defaultPos?.[1] ?? 0),
+        lastUpdatedAt: t.lastUpdatedAt,
+      };
+    })
   );
 
   const initMap = useCallback(() => {
@@ -105,15 +115,23 @@ export function RaceMap({
         setTeams((prev) =>
           prev.map((t) => {
             const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
-            if (!fromApi || fromApi.lastLat == null || fromApi.lastLng == null)
-              return t;
+            const defaultPos = DEFAULT_POSITIONS[t.id];
+            if (!fromApi) return t;
+            if (fromApi.lastLat != null && fromApi.lastLng != null) {
+              return {
+                ...t,
+                lat: fromApi.lastLat,
+                lng: fromApi.lastLng,
+                lastUpdatedAt: fromApi.lastUpdatedAt
+                  ? new Date(fromApi.lastUpdatedAt)
+                  : t.lastUpdatedAt,
+              };
+            }
+            // No broadcast yet: keep last known or show default start position
             return {
               ...t,
-              lat: fromApi.lastLat,
-              lng: fromApi.lastLng,
-              lastUpdatedAt: fromApi.lastUpdatedAt
-                ? new Date(fromApi.lastUpdatedAt)
-                : t.lastUpdatedAt,
+              lat: defaultPos?.[0] ?? t.lat,
+              lng: defaultPos?.[1] ?? t.lng,
             };
           })
         );
@@ -203,6 +221,9 @@ export function RaceMap({
           <p className="text-muted-foreground">Ootame meeskondade asukohte…</p>
         </div>
       )}
+      <p className="absolute bottom-2 left-2 right-2 rounded bg-background/80 px-2 py-1 text-center text-xs text-muted-foreground backdrop-blur">
+        Täpid: viimane teadaolev asukoht (või stardipunkt Pariis/Tallinn, kui asukohta veel jagatud pole).
+      </p>
     </div>
   );
 }
