@@ -12,7 +12,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (e) {
+    console.error("Admin layout session error:", e);
+    redirect("/login?callbackUrl=/admin&error=config");
+  }
   const email = session?.user?.email?.toLowerCase();
   if (!email || !ADMIN_EMAILS.includes(email)) {
     redirect("/login?callbackUrl=/admin");

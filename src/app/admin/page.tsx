@@ -5,29 +5,56 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [teams, penalties, purchases, raceStatus, wheelConfig] = await Promise.all([
-    prisma.team.findMany({ orderBy: { id: "asc" } }),
-    prisma.penalty.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: {
-        penaltyOption: true,
-        team: true,
-      },
-    }),
-    prisma.purchase.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 30,
-      include: { penaltyOption: true, team: true },
-    }),
-    prisma.raceStatus.findUnique({ where: { id: "default" } }),
-    prisma.wheelConfig.findUnique({ where: { id: "default" } }),
-  ]);
+  let teams: Awaited<ReturnType<typeof prisma.team.findMany>>;
+  let penalties: Awaited<ReturnType<typeof prisma.penalty.findMany>>;
+  let purchases: Awaited<ReturnType<typeof prisma.purchase.findMany>>;
+  let raceStatus: { status: string } | null;
+  let wheelConfig: { outcomesJson: string } | null;
+  let voteCounts: { teamId: number; _count: number }[];
 
-  const voteCounts = await prisma.vote.groupBy({
-    by: ["teamId"],
-    _count: true,
-  });
+  try {
+    [teams, penalties, purchases, raceStatus, wheelConfig] = await Promise.all([
+      prisma.team.findMany({ orderBy: { id: "asc" } }),
+      prisma.penalty.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: {
+          penaltyOption: true,
+          team: true,
+        },
+      }),
+      prisma.purchase.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        include: { penaltyOption: true, team: true },
+      }),
+      prisma.raceStatus.findUnique({ where: { id: "default" } }),
+      prisma.wheelConfig.findUnique({ where: { id: "default" } }),
+    ]);
+
+    voteCounts = await prisma.vote.groupBy({
+      by: ["teamId"],
+      _count: true,
+    });
+  } catch (e) {
+    console.error("Admin page data error:", e);
+    const message = e instanceof Error ? e.message : String(e);
+    return (
+      <div className="container max-w-md space-y-4 px-4 py-12">
+        <h1 className="text-xl font-semibold">Halduspaneel – viga</h1>
+        <p className="text-muted-foreground">
+          Andmebaasiga ühendus ebaõnnestus. Kontrolli Vercelis:
+        </p>
+        <ul className="list-inside list-disc text-sm text-muted-foreground">
+          <li><strong>DATABASE_URL</strong> – õige Neon connection string</li>
+          <li><strong>NEXTAUTH_SECRET</strong> – peab olema seatud</li>
+          <li><strong>NEXTAUTH_URL</strong> – https://sisuloojad-euroopas.vercel.app (ilma lõpuslashita)</li>
+          <li><strong>ADMIN_EMAILS</strong> – sinu e-mail (komadega eraldatud, kui mitu)</li>
+        </ul>
+        <p className="text-xs text-muted-foreground">Tehniline: {message}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container space-y-8 px-4 py-8">
