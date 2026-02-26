@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { broadcastBodySchema } from "@/lib/validation";
-import { applyJitter, roundCoordinate, haversineDistanceKm } from "@/lib/utils";
+import { roundCoordinate, haversineDistanceKm } from "@/lib/utils";
 import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_LOCATION } from "@/lib/pusher";
 
 const RATE_LIMIT_MS = 5000; // 1 update per 5 seconds per team
@@ -40,9 +40,9 @@ export async function POST(req: Request) {
     }
     lastUpdate[teamId] = now;
 
-    const { lat: jitteredLat, lng: jitteredLng } = applyJitter(lat, lng, 2);
-    const displayLat = roundCoordinate(jitteredLat);
-    const displayLng = roundCoordinate(jitteredLng);
+    // No jitter: use accurate GPS. Round to ~1 m (5 decimals) for storage
+    const displayLat = roundCoordinate(lat, 5);
+    const displayLng = roundCoordinate(lng, 5);
 
     const team = await prisma.team.findUnique({ where: { id: teamId } });
     let addKm = 0;
@@ -53,6 +53,9 @@ export async function POST(req: Request) {
         displayLat,
         displayLng
       );
+      // Ignore GPS glitches: cap at ~0.5 km per update (e.g. 30s interval = walking/running pace)
+      const MAX_KM_PER_UPDATE = 0.5;
+      if (addKm > MAX_KM_PER_UPDATE) addKm = 0;
     }
 
     await prisma.team.update({
@@ -66,12 +69,16 @@ export async function POST(req: Request) {
     });
 
     if (process.env.PUSHER_APP_ID) {
-      await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_LOCATION, {
-        teamId,
-        lat: displayLat,
-        lng: displayLng,
-        lastUpdatedAt: new Date().toISOString(),
-      });
+      try {
+        await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_LOCATION, {
+          teamId,
+          lat: displayLat,
+          lng: displayLng,
+          lastUpdatedAt: new Date().toISOString(),
+        });
+      } catch (pusherErr) {
+        console.error("Broadcast: Pusher failed (location was saved):", pusherErr);
+      }
     }
 
     return NextResponse.json({
@@ -81,9 +88,15 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error("Broadcast error:", e);
+    const isPrisma = e && typeof e === "object" && "code" in e;
+    const message = isPrisma
+      ? "Andmebaasiga ühendus ebaõnnestus. Kontrolli DATABASE_URL Vercelis."
+      : e instanceof Error
+        ? e.message
+        : "Failed to update location";
     return NextResponse.json(
-      { error: "Failed to update location" },
-      { status: 500 }
+      { error: message },
+      { status: isPrisma ? 503 : 500 }
     );
   }
 }
