@@ -17,18 +17,26 @@ type PenaltyOption = {
   teamSpecific: boolean;
 };
 
+type PenaltyShopProps = {
+  team1Name: string;
+  team2Name: string;
+  /** On team page: only show options to buy for this team */
+  fixedTeamId?: number;
+  fixedTeamName?: string;
+};
+
 export function PenaltyShop({
   team1Name,
   team2Name,
-}: {
-  team1Name: string;
-  team2Name: string;
-}) {
+  fixedTeamId,
+  fixedTeamName,
+}: PenaltyShopProps) {
   const { data: session, status } = useSession();
   const [options, setOptions] = useState<PenaltyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const { toast } = useToast();
+  const singleTeam = fixedTeamId != null;
 
   useEffect(() => {
     fetch("/api/penalties/options")
@@ -69,7 +77,9 @@ export function PenaltyShop({
       <CardHeader>
         <CardTitle>Osta sekkumine</CardTitle>
         <CardDescription>
-          Saada meeskonnale karistus. Sina valid meeskonna.
+          {singleTeam && fixedTeamName
+            ? `Osta karistus meeskonnale ${fixedTeamName}.`
+            : "Saada meeskonnale karistus. Sina valid meeskonna."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -93,24 +103,34 @@ export function PenaltyShop({
                     €{(opt.priceCents / 100).toFixed(2)}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                {singleTeam && fixedTeamId != null ? (
                   <Button
                     size="sm"
-                    variant="outline"
                     disabled={status !== "authenticated" || buying !== null}
-                    onClick={() => buy(opt.id, 1)}
+                    onClick={() => buy(opt.id, fixedTeamId)}
                   >
-                    {team1Name}
+                    {buying === opt.id ? "Suunan…" : "Osta"}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={status !== "authenticated" || buying !== null}
-                    onClick={() => buy(opt.id, 2)}
-                  >
-                    {team2Name}
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={status !== "authenticated" || buying !== null}
+                      onClick={() => buy(opt.id, 1)}
+                    >
+                      {team1Name}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={status !== "authenticated" || buying !== null}
+                      onClick={() => buy(opt.id, 2)}
+                    >
+                      {team2Name}
+                    </Button>
+                  </div>
+                )}
               </motion.li>
             ))}
           </ul>

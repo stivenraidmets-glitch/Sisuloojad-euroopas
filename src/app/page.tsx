@@ -61,10 +61,10 @@ export default async function HomePage() {
   return (
     <div className="container space-y-8 px-4 py-8">
       <section>
-        <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-foreground md:text-4xl">
           Alustame Nullist <span className="text-primary">·</span> Pariis – Tallinn
         </h1>
-        <p className="mb-6 max-w-2xl text-muted-foreground leading-relaxed">
+        <p className="mb-6 text-muted-foreground leading-relaxed">
           4 sisuloojat alustavad võistlusega Pariisist. Mõlemal tiimil on alguses 0€ ja nende eesmärk on jõuda esimesena tagasi Eestisse. Sina kui vaataja saad siin kodulehel elada enda tiimile reaalajas kaasa või hoopis aeglustada teist tiimi ostes erinevaid karistusi. Ära unusta ka keerutada loosratast, kus sul on võimalik võita üks tasuta karistus. Tervest sellest seiklusest tuleb eraldi YouTube seeria, mida näed juba varsti!
         </p>
         <Suspense fallback={<div className="h-[400px] animate-pulse rounded-lg bg-muted" />}>

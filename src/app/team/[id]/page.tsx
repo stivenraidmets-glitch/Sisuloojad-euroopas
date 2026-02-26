@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TeamPageMap } from "@/components/map/TeamPageMap";
+import { PenaltyShop } from "@/components/shop/PenaltyShop";
 
 export default async function TeamPage({
   params,
@@ -14,20 +15,26 @@ export default async function TeamPage({
   const teamId = parseInt(id, 10);
   if (teamId !== 1 && teamId !== 2) notFound();
 
-  const team = await prisma.team.findUnique({
-    where: { id: teamId },
-    include: {
-      penalties: {
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        include: {
-          penaltyOption: { select: { title: true, durationMinutes: true } },
+  const [team, allTeams] = await Promise.all([
+    prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        penalties: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: {
+            penaltyOption: { select: { title: true, durationMinutes: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.team.findMany({ orderBy: { id: "asc" }, select: { id: true, name: true } }),
+  ]);
 
   if (!team) notFound();
+
+  const team1Name = allTeams[0]?.name ?? "Kozip";
+  const team2Name = allTeams[1]?.name ?? "Stiven ja Sidni";
 
   const locationText =
     team.lastLat != null && team.lastLng != null
@@ -40,41 +47,53 @@ export default async function TeamPage({
   const distanceKm = team.totalDistanceKm ?? 0;
 
   return (
-    <div className="container max-w-2xl space-y-8 px-4 py-8">
+    <div className="container max-w-5xl space-y-8 px-4 py-8">
       <div>
         <Link href="/">
           <Button variant="ghost" size="sm">← Tagasi</Button>
         </Link>
       </div>
-      <Card>
-        <CardHeader>
-          <div
-            className="mb-2 h-3 w-24 rounded-full"
-            style={{ backgroundColor: team.color }}
+
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div
+              className="mb-2 h-3 w-24 rounded-full"
+              style={{ backgroundColor: team.color }}
+            />
+            <CardTitle>{team.name}</CardTitle>
+            <CardDescription>Praegune ligikaudne asukoht</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <TeamPageMap
+              teamId={team.id}
+              name={team.name}
+              color={team.color}
+              lastLat={team.lastLat}
+              lastLng={team.lastLng}
+              accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
+            />
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <p className="font-mono text-muted-foreground">{locationText}</p>
+              {updatedAgo && (
+                <p className="text-muted-foreground">Uuendatud {updatedAgo}</p>
+              )}
+              <p className="font-medium">
+                Läbitud: <span className="text-primary">{distanceKm.toFixed(1)} km</span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-col">
+          <PenaltyShop
+            team1Name={team1Name}
+            team2Name={team2Name}
+            fixedTeamId={team.id}
+            fixedTeamName={team.name}
           />
-          <CardTitle>{team.name}</CardTitle>
-          <CardDescription>Praegune ligikaudne asukoht</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <TeamPageMap
-            teamId={team.id}
-            name={team.name}
-            color={team.color}
-            lastLat={team.lastLat}
-            lastLng={team.lastLng}
-            accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
-          />
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <p className="font-mono text-muted-foreground">{locationText}</p>
-            {updatedAgo && (
-              <p className="text-muted-foreground">Uuendatud {updatedAgo}</p>
-            )}
-            <p className="font-medium">
-              Läbitud: <span className="text-primary">{distanceKm.toFixed(1)} km</span>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>
