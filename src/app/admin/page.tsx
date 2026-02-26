@@ -1,41 +1,55 @@
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { AdminClient } from "./AdminClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
+type PenaltyWithRelations = Prisma.PenaltyGetPayload<{
+  include: { penaltyOption: true; team: true };
+}>;
+type PurchaseWithRelations = Prisma.PurchaseGetPayload<{
+  include: { penaltyOption: true; team: true };
+}>;
+
 export default async function AdminPage() {
   let teams: Awaited<ReturnType<typeof prisma.team.findMany>>;
-  let penalties: Awaited<ReturnType<typeof prisma.penalty.findMany>>;
-  let purchases: Awaited<ReturnType<typeof prisma.purchase.findMany>>;
+  let penalties: PenaltyWithRelations[];
+  let purchases: PurchaseWithRelations[];
   let raceStatus: { status: string } | null;
   let wheelConfig: { outcomesJson: string } | null;
   let voteCounts: { teamId: number; _count: number }[];
 
   try {
-    [teams, penalties, purchases, raceStatus, wheelConfig] = await Promise.all([
-      prisma.team.findMany({ orderBy: { id: "asc" } }),
-      prisma.penalty.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        include: {
-          penaltyOption: true,
-          team: true,
-        },
-      }),
-      prisma.purchase.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 30,
-        include: { penaltyOption: true, team: true },
-      }),
-      prisma.raceStatus.findUnique({ where: { id: "default" } }),
-      prisma.wheelConfig.findUnique({ where: { id: "default" } }),
-    ]);
-
-    voteCounts = await prisma.vote.groupBy({
-      by: ["teamId"],
-      _count: true,
-    });
+    const [teamsResult, penaltiesResult, purchasesResult, raceStatusResult, wheelConfigResult, voteCountsResult] =
+      await Promise.all([
+        prisma.team.findMany({ orderBy: { id: "asc" } }),
+        prisma.penalty.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          include: {
+            penaltyOption: true,
+            team: true,
+          },
+        }),
+        prisma.purchase.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 30,
+          include: { penaltyOption: true, team: true },
+        }),
+        prisma.raceStatus.findUnique({ where: { id: "default" } }),
+        prisma.wheelConfig.findUnique({ where: { id: "default" } }),
+        prisma.vote.groupBy({
+          by: ["teamId"],
+          _count: true,
+        }),
+      ]);
+    teams = teamsResult;
+    penalties = penaltiesResult;
+    purchases = purchasesResult;
+    raceStatus = raceStatusResult;
+    wheelConfig = wheelConfigResult;
+    voteCounts = voteCountsResult;
   } catch (e) {
     console.error("Admin page data error:", e);
     const message = e instanceof Error ? e.message : String(e);
