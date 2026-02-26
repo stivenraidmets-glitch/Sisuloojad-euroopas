@@ -49,6 +49,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    const wheelSpin = await prisma.wheelSpin.findUnique({
+      where: { userId: user.id },
+    });
+    const useHalfOff =
+      wheelSpin?.resultType === "HALF_OFF_PENALTY" && wheelSpin.redeemedAt == null;
+    const amountCents = useHalfOff
+      ? Math.max(50, Math.round(option.priceCents / 2))
+      : option.priceCents;
+
     const origin = req.headers.get("origin") ?? "http://localhost:3000";
 
     const stripeSession = await getStripe().checkout.sessions.create({
@@ -67,7 +76,7 @@ export async function POST(req: Request) {
                 userId: user.id,
               },
             },
-            unit_amount: option.priceCents,
+            unit_amount: amountCents,
           },
           quantity: 1,
         },
@@ -78,6 +87,7 @@ export async function POST(req: Request) {
         userId: user.id,
         penaltyOptionId: option.id,
         teamId: String(teamId),
+        ...(useHalfOff ? { wheelHalfOff: "true" } : {}),
       },
       customer_email: session.user.email,
     });

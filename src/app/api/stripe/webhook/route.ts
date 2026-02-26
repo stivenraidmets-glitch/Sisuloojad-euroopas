@@ -62,6 +62,13 @@ export async function POST(req: Request) {
           data: { status: "COMPLETED" },
         });
       }
+
+      if (session.metadata?.wheelHalfOff === "true" && userId) {
+        await prisma.wheelSpin.updateMany({
+          where: { userId },
+          data: { redeemedAt: new Date() },
+        });
+      }
     }
   }
 

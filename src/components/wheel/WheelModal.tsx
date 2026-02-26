@@ -12,13 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-// 50% NOTHING, 25% RESPIN, 15% HALF_OFF, 10% FREE (20 segments)
+// 4 segments shown on wheel (probabilities handled server-side)
 const SEGMENTS = [
-  ...Array(10).fill({ label: "Mitte midagi", type: "NOTHING", value: 0 }),
-  ...Array(5).fill({ label: "Keeruta uuesti", type: "RESPIN", value: 0 }),
-  ...Array(3).fill({ label: "50% soodustus", type: "HALF_OFF_PENALTY", value: 50 }),
-  ...Array(2).fill({ label: "Tasuta karistus", type: "FREE_PENALTY", value: 0 }),
-] as { label: string; type: string; value: number }[];
+  { label: "Mitte midagi", type: "NOTHING", value: 0 },
+  { label: "Keeruta uuesti", type: "RESPIN", value: 0 },
+  { label: "50% soodustus", type: "HALF_OFF_PENALTY", value: 50 },
+  { label: "Tasuta karistus", type: "FREE_PENALTY", value: 0 },
+];
 
 type WheelModalProps = {
   open: boolean;
@@ -84,19 +84,34 @@ export function WheelModal({ open, onOpenChange, onSpun }: WheelModalProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center gap-6 py-4">
-          <div className="relative h-48 w-48">
+          <div className="relative h-52 w-52">
             <motion.div
-              className="absolute inset-0 rounded-full border-4 border-primary bg-muted"
+              className="absolute inset-0 flex items-center justify-center rounded-full border-4 border-primary bg-muted text-center text-sm font-medium"
               style={{
-                background: `conic-gradient(${SEGMENTS.map(
-                  (s, i) =>
-                    `hsl(${200 + i * 40}, 70%, 45%) ${(i * 360) / SEGMENTS.length}deg ${((i + 1) * 360) / SEGMENTS.length}deg`
-                ).join(", ")})`,
+                background: `conic-gradient(from 0deg, hsl(240, 50%, 35%) 0deg 90deg, hsl(280, 50%, 35%) 90deg 180deg, hsl(320, 55%, 38%) 180deg 270deg, hsl(160, 50%, 35%) 270deg 360deg)`,
               }}
               animate={{ rotate: rotation }}
               transition={{ duration: 5, ease: "easeOut" }}
-            />
-            <div className="absolute left-1/2 top-0 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow" />
+            >
+              {/* Segment labels as overlay - 4 quadrants */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative h-full w-full rounded-full">
+                  <span className="absolute left-1/2 top-2 -translate-x-1/2 whitespace-nowrap text-xs text-white drop-shadow-md">
+                    {SEGMENTS[0].label}
+                  </span>
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 whitespace-nowrap text-right text-xs text-white drop-shadow-md">
+                    {SEGMENTS[1].label}
+                  </span>
+                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs text-white drop-shadow-md">
+                    {SEGMENTS[2].label}
+                  </span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs text-white drop-shadow-md">
+                    {SEGMENTS[3].label}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+            <div className="pointer-events-none absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-primary bg-primary shadow-lg" />
           </div>
           <AnimatePresence>
             {result && (

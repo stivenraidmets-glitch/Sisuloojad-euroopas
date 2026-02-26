@@ -146,12 +146,13 @@ model Penalty {
 }
 
 model WheelSpin {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  resultType String  // CREDITS, FREE_PENALTY, NOTHING
-  value     Int      @default(0) // credits amount or 0
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  resultType String    // CREDITS, FREE_PENALTY, NOTHING, HALF_OFF_PENALTY
+  value      Int       @default(0) // credits amount or 0
+  redeemedAt DateTime? // when user used their prize (free or 50% off)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Race status stored in env or a simple key-value table; for simplicity we use a single RaceStatus model
