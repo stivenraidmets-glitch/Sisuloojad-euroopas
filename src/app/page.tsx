@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { prisma } from "@/lib/db";
+import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
 import { RaceMap } from "@/components/map/RaceMap";
 import { VoteModule } from "@/components/vote/VoteModule";
 import { PenaltyShop } from "@/components/shop/PenaltyShop";
@@ -18,42 +19,19 @@ async function getTeams() {
       lastLat: true,
       lastLng: true,
       lastUpdatedAt: true,
-      penalties: {
-        where: { status: "ACTIVE" },
-        take: 1,
-        orderBy: { startsAt: "desc" },
-        select: {
-          startsAt: true,
-          penaltyOption: {
-            select: { title: true, type: true, durationMinutes: true },
-          },
-        },
-      },
     },
   });
-  return teams.map((t) => {
-    const p = t.penalties[0];
-    const option = p?.penaltyOption;
-    const startsAt = p?.startsAt ? new Date(p.startsAt) : null;
-    const durationMin = option?.durationMinutes ?? 0;
-    const endsAt =
-      startsAt && durationMin > 0
-        ? new Date(startsAt.getTime() + durationMin * 60 * 1000)
-        : null;
-    const { penalties: _, ...rest } = t;
-    return {
-      ...rest,
-      activePenalty:
-        p && option && endsAt
-          ? {
-              title: option.title,
-              type: option.type,
-              endsAt: endsAt.toISOString(),
-              durationMinutes: durationMin,
-            }
-          : null,
-    };
-  });
+  const withPenalties = await Promise.all(
+    teams.map(async (t) => {
+      const { current, queued } = await getTeamPenaltyQueue(t.id);
+      return {
+        ...t,
+        activePenalty: current,
+        queuedPenalties: queued,
+      };
+    })
+  );
+  return withPenalties;
 }
 
 async function getRecentPenalties() {

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { notifyPenaltyToChat } from "@/lib/chat-notify";
+import { shouldStartPenaltyImmediately } from "@/lib/penalty-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
           where: { id: teamId },
           select: { name: true },
         });
-        const now = new Date();
+        const startNow = await shouldStartPenaltyImmediately(teamId);
         await prisma.$transaction([
           prisma.purchase.update({
             where: { id: purchase.id },
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
               penaltyOptionId,
               purchasedByUserId: userId,
               status: "ACTIVE",
-              startsAt: now,
+              startsAt: startNow ? new Date() : null,
               purchaseId: purchase.id,
             },
           }),

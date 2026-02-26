@@ -15,6 +15,22 @@ async function main() {
   });
 
   await prisma.penaltyOption.upsert({
+    where: { id: "timeout-30sec" },
+    update: {
+      title: "30 sekundi külm",
+      description: "Meeskond peab peatuma 30 sekundiks",
+    },
+    create: {
+      id: "timeout-30sec",
+      teamSpecific: true,
+      title: "30 sekundi külm",
+      description: "Meeskond peab peatuma 30 sekundiks",
+      durationMinutes: 0.5,
+      priceCents: 99,
+      type: "TIMEOUT",
+    },
+  });
+  await prisma.penaltyOption.upsert({
     where: { id: "timeout-15" },
     update: {
       title: "15 min paus",

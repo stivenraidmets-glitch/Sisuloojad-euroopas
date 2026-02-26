@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { notifyPenaltyToChat } from "@/lib/chat-notify";
+import { shouldStartPenaltyImmediately } from "@/lib/penalty-queue";
 
 export const dynamic = "force-dynamic";
 
@@ -68,14 +69,14 @@ export async function POST(req: Request) {
       },
     });
 
-    const now = new Date();
+    const startNow = await shouldStartPenaltyImmediately(teamId);
     await prisma.penalty.create({
       data: {
         teamId,
         penaltyOptionId: option.id,
         purchasedByUserId: user.id,
         status: "ACTIVE",
-        startsAt: now,
+        startsAt: startNow ? new Date() : null,
         purchaseId: purchase.id,
       },
     });

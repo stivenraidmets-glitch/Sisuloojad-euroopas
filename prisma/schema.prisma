@@ -107,7 +107,7 @@ model PenaltyOption {
   teamSpecific    Boolean   @default(false) // if true, buyer picks team
   title           String
   description     String?
-  durationMinutes Int?
+  durationMinutes Float? // e.g. 15, 30, 0.5 for 30 seconds
   priceCents      Int
   type            String    // TIMEOUT, DETOUR, etc.
   createdAt       DateTime  @default(now())

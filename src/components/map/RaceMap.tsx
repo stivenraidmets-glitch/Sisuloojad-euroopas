@@ -20,8 +20,13 @@ const DEFAULT_POSITIONS: Record<number, [number, number]> = {
 type ActivePenalty = {
   title: string;
   type: string;
-  endsAt: string;
+  endsAt: string | null;
   durationMinutes: number;
+};
+
+type QueuedPenalty = {
+  title: string;
+  durationMinutes: number | null;
 };
 
 type TeamState = {
@@ -32,6 +37,7 @@ type TeamState = {
   lng: number;
   lastUpdatedAt: Date | null;
   activePenalty: ActivePenalty | null;
+  queuedPenalties: QueuedPenalty[];
 };
 
 type RaceMapProps = {
@@ -43,6 +49,7 @@ type RaceMapProps = {
     lastLng: number | null;
     lastUpdatedAt: Date | null;
     activePenalty?: ActivePenalty | null;
+    queuedPenalties?: QueuedPenalty[];
   }[];
   channelName?: string;
   accessToken: string;
@@ -70,6 +77,7 @@ export function RaceMap({
         lng: hasBroadcast ? t.lastLng! : (defaultPos?.[1] ?? 0),
         lastUpdatedAt: t.lastUpdatedAt,
         activePenalty: t.activePenalty ?? null,
+        queuedPenalties: t.queuedPenalties ?? [],
       };
     })
   );
@@ -137,7 +145,11 @@ export function RaceMap({
             const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
             const defaultPos = DEFAULT_POSITIONS[t.teamId];
             if (!fromApi) return t;
-            const next = { ...t, activePenalty: fromApi.activePenalty ?? null };
+            const next = {
+              ...t,
+              activePenalty: fromApi.activePenalty ?? null,
+              queuedPenalties: fromApi.queuedPenalties ?? [],
+            };
             if (fromApi.lastLat != null && fromApi.lastLng != null) {
               return {
                 ...next,
@@ -253,7 +265,9 @@ export function RaceMap({
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
-  const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
+  const teamsWithPenalty = teams.filter(
+    (t) => t.activePenalty != null || (t.queuedPenalties?.length ?? 0) > 0
+  );
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10">
@@ -264,19 +278,38 @@ export function RaceMap({
         </div>
       )}
       {teamsWithPenalty.length > 0 && (
-        <div className="absolute left-2 right-2 top-2 flex flex-wrap gap-2">
+        <div className="absolute left-2 right-2 top-2 flex flex-col gap-2">
           {teamsWithPenalty.map((t) => (
-            <span
+            <div
               key={t.teamId}
-              className="inline-flex items-center gap-1.5 rounded bg-background/90 px-2 py-1 text-xs font-medium backdrop-blur"
-              title={t.activePenalty!.title}
+              className="flex flex-col gap-0.5 rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur"
             >
-              <span className="text-base" aria-hidden>❄️</span>
-              <span className="truncate">{t.name}:</span>
-              <span className="text-primary">
-                {t.activePenalty!.title} ({formatRemaining(t.activePenalty!.endsAt)})
-              </span>
-            </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base" aria-hidden>❄️</span>
+                <span className="truncate">{t.name}:</span>
+                {t.activePenalty ? (
+                  <span className="text-primary">
+                    {t.activePenalty.title}
+                    {t.activePenalty.endsAt ? (
+                      <> ({formatRemaining(t.activePenalty.endsAt)})</>
+                    ) : (
+                      " (aktiivne)"
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </div>
+              {(t.queuedPenalties?.length ?? 0) > 0 && (
+                <div className="ml-5 flex flex-wrap gap-x-2 gap-y-0.5 text-muted-foreground">
+                  {t.queuedPenalties!.map((q, i) => (
+                    <span key={i} className="text-[11px]">
+                      Järgmine: {q.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
