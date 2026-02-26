@@ -56,6 +56,8 @@ Save, then **Redeploy** again.
 
 **Login:** Magic-link login only works if you add **EMAIL_SERVER** and **EMAIL_FROM** (e.g. Resend, SendGrid). To log in without email, set **ENABLE_DEV_LOGIN** and **NEXT_PUBLIC_ENABLE_DEV_LOGIN** to `1` in Vercel, redeploy, then use the button on the login page with **test@test.com** / **dev**.
 
+**Optional – Stripe (penalty shop payments):** To accept real payments when users buy penalties, add **STRIPE_SECRET_KEY** and **STRIPE_WEBHOOK_SECRET** in Vercel. Full steps: see **STRIPE-CONFIG.md**.
+
 ---
 
 ## 5. Open your site

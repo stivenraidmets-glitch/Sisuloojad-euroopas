@@ -55,8 +55,8 @@ export default async function HomePage() {
 
   const team1 = teams[0];
   const team2 = teams[1];
-  const team1Name = team1?.name ?? "Meeskond 1";
-  const team2Name = team2?.name ?? "Meeskond 2";
+  const team1Name = team1?.name ?? "Kozip";
+  const team2Name = team2?.name ?? "Stiven ja Sidni";
 
   return (
     <div className="container space-y-8 px-4 py-8">

@@ -87,8 +87,8 @@ function BroadcastContent() {
               onChange={(e) => setTeamId(parseInt(e.target.value, 10) as 1 | 2)}
               disabled={sharing}
             >
-              <option value={1}>Meeskond 1</option>
-              <option value={2}>Meeskond 2</option>
+              <option value={1}>Kozip</option>
+              <option value={2}>Stiven ja Sidni</option>
             </select>
           </div>
           <p className="text-sm text-muted-foreground">

@@ -5,13 +5,13 @@ const prisma = new PrismaClient();
 async function main() {
   await prisma.team.upsert({
     where: { id: 1 },
-    update: { name: "Meeskond Paris", color: "#3B82F6" },
-    create: { id: 1, name: "Meeskond Paris", color: "#3B82F6" },
+    update: { name: "Kozip", color: "#3B82F6" },
+    create: { id: 1, name: "Kozip", color: "#3B82F6" },
   });
   await prisma.team.upsert({
     where: { id: 2 },
-    update: { name: "Meeskond Tallinn", color: "#EF4444" },
-    create: { id: 2, name: "Meeskond Tallinn", color: "#EF4444" },
+    update: { name: "Stiven ja Sidni", color: "#EF4444" },
+    create: { id: 2, name: "Stiven ja Sidni", color: "#EF4444" },
   });
 
   await prisma.penaltyOption.upsert({

@@ -18,10 +18,10 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-2">
           <Link href="/team/1">
-            <Button variant="ghost" size="sm">Meeskond 1</Button>
+            <Button variant="ghost" size="sm">Kozip</Button>
           </Link>
           <Link href="/team/2">
-            <Button variant="ghost" size="sm">Meeskond 2</Button>
+            <Button variant="ghost" size="sm">Stiven ja Sidni</Button>
           </Link>
           <ThemeToggle />
           {status === "loading" ? (
