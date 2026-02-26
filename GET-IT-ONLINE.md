@@ -182,6 +182,6 @@ You keep hosting on Vercel; the domain just points to it. No need to pay for Zon
 | Login doesn’t work | Set **NEXTAUTH_URL** in Vercel to your exact live URL (with https://). Redeploy. |
 | Map doesn’t show | Add **NEXT_PUBLIC_MAPBOX_TOKEN** in Vercel env vars and redeploy. |
 | 500 error on first open | Often the database: run `prisma db push` and `prisma db seed` with Neon URL, then push and redeploy. |
-| “Application error: a server-side exception” | Set **NEXTAUTH_SECRET** (long random string, e.g. from https://generate-secret.vercel.app/32) and **NEXTAUTH_URL** (your exact site URL) in Vercel. Redeploy. |
+| “Application error: a server-side exception” | Often the database: (1) Set **DATABASE_URL** in Vercel to the **same** Neon connection string you used when you ran `prisma db push` and `prisma db seed`. (2) If the host in the error is different, replace it in Vercel with the working Neon URL. (3) Set **NEXTAUTH_SECRET** and **NEXTAUTH_URL** too, then redeploy. |
 
 If something doesn’t work, copy the error message (from the browser or Vercel deployment log) and ask for help—mention you followed GET-IT-ONLINE.md.

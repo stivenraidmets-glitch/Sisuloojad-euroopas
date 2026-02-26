@@ -34,11 +34,11 @@ function BroadcastContent() {
         }),
       })
         .then(async (res) => {
-          const data = await res.json();
+          const data = await res.json().catch(() => ({}));
           if (res.ok) setLastSent(new Date());
-          else toast({ title: data.error || "Saatmine ebaõnnestus", variant: "destructive" });
+          else toast({ title: (data as { error?: string }).error || "Saatmine ebaõnnestus", variant: "destructive" });
         })
-        .catch(() => toast({ title: "Võrgu viga", variant: "destructive" }));
+        .catch(() => toast({ title: "Võrgu viga. Kontrolli ühendust.", variant: "destructive" }));
     },
     [teamId, secretToSend, toast]
   );

@@ -25,6 +25,17 @@ model User {
   purchases      Purchase[]
   penaltiesBought Penalty[]  @relation("PurchasedBy")
   wheelSpin      WheelSpin?
+  chatMessages   ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  userId    String
+  body      String   // max length enforced in app
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
 model Account {

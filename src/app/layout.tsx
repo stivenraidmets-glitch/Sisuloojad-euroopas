@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Header } from "@/components/layout/Header";
+import { Chatbox } from "@/components/chat/Chatbox";
+import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,8 +22,12 @@ export default function RootLayout({
     <html lang="et" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
+          <AnimatedBackground />
           <Header />
-          <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+          <div className="flex min-h-[calc(100vh-3.5rem)]">
+            <main className="min-w-0 flex-1">{children}</main>
+            <Chatbox />
+          </div>
         </Providers>
       </body>
     </html>

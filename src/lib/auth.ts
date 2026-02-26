@@ -4,8 +4,7 @@ import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./db";
 
-const isDevLoginEnabled =
-  process.env.NODE_ENV === "development" && process.env.ENABLE_DEV_LOGIN === "1";
+const isDevLoginEnabled = process.env.ENABLE_DEV_LOGIN === "1";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
@@ -52,7 +51,8 @@ export const authOptions: NextAuthOptions = {
       : []),
   ],
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
-  pages: { signIn: "/login" },
+  pages: { signIn: "/login", error: "/login" },
+  trustHost: true,
   callbacks: {
     async signIn({ user }) {
       if (user?.email) {

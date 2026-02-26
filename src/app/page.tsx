@@ -61,7 +61,9 @@ export default async function HomePage() {
   return (
     <div className="container space-y-8 px-4 py-8">
       <section>
-        <h1 className="mb-4 text-2xl font-bold">Paris → Tallinn võistlus (rahata)</h1>
+        <h1 className="mb-4 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+          Paris → Tallinn <span className="text-primary">võistlus</span> (rahata)
+        </h1>
         <p className="mb-6 text-muted-foreground">
           Jälgi meeskondade ligikaudseid asukohti kaardil. Hääleta, osta sekkumisi ja keeruta ratast.
         </p>

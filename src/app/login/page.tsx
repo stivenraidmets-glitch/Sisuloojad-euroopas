@@ -18,6 +18,7 @@ function LoginContent() {
   const [sent, setSent] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const errorParam = searchParams.get("error");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,9 +69,18 @@ function LoginContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {errorParam && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="font-medium">Sisselogimine ebaõnnestus</p>
+                <p className="mt-1 text-muted-foreground">
+                  Kontrolli Vercelis: <strong>NEXTAUTH_URL</strong> = https://sisuloojad-euroopas.vercel.app (ilma lõpuslashita),
+                  <strong> NEXTAUTH_SECRET</strong> on seatud, <strong>DATABASE_URL</strong> on õige. Seejärel redeploy. Kui kasutad magilinki, taotle uus link pärast seadeid.
+                </p>
+              </div>
+            )}
             {devLoginEnabled && (
               <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
-                <p className="mb-2 text-sm font-medium">Kiirsisse (ainult lokaalselt)</p>
+                <p className="mb-2 text-sm font-medium">Kiirsisse (test@test.com / dev)</p>
                 <Button
                   type="button"
                   variant="secondary"

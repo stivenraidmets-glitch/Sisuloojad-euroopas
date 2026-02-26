@@ -4,44 +4,45 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
+    --background: 222 47% 6%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
+    --card: 222 40% 9%;
     --card-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
+    --primary: 187 85% 53%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 217 33% 12%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
+    --muted: 217 33% 12%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 187 85% 53%;
+    --accent-foreground: 222 47% 6%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 217 91% 60%;
-    --radius: 0.5rem;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 187 85% 53%;
+    --radius: 0.625rem;
+    --glow: 187 85% 53%;
   }
 
   .light {
-    --background: 0 0% 100%;
+    --background: 0 0% 99%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
+    --primary: 187 85% 45%;
     --primary-foreground: 255 255 255;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 217 91% 60%;
+    --accent: 187 85% 45%;
     --accent-foreground: 255 255 255;
     --destructive: 0 84% 60%;
     --destructive-foreground: 255 255 255;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: 187 85% 45%;
   }
 }
 
@@ -52,6 +53,31 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+}
+
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes grid-shift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(60px, 60px); }
+}
+
+.animate-blob {
+  animation: blob 8s ease-in-out infinite;
+}
+
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.6) 1px, transparent 1px);
+  animation: grid-shift 25s linear infinite;
 }
 
 /* Mapbox overrides for dark theme */
