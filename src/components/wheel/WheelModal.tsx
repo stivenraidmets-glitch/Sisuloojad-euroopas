@@ -12,14 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
+// 50% NOTHING, 25% RESPIN, 15% HALF_OFF, 10% FREE (20 segments)
 const SEGMENTS = [
-  { label: "10 krediiti", type: "CREDITS", value: 10 },
-  { label: "Mitte midagi", type: "NOTHING", value: 0 },
-  { label: "25 krediiti", type: "CREDITS", value: 25 },
-  { label: "Tasuta paus!", type: "FREE_PENALTY", value: 0 },
-  { label: "Mitte midagi", type: "NOTHING", value: 0 },
-  { label: "10 krediiti", type: "CREDITS", value: 10 },
-];
+  ...Array(10).fill({ label: "Mitte midagi", type: "NOTHING", value: 0 }),
+  ...Array(5).fill({ label: "Keeruta uuesti", type: "RESPIN", value: 0 }),
+  ...Array(3).fill({ label: "50% soodustus", type: "HALF_OFF_PENALTY", value: 50 }),
+  ...Array(2).fill({ label: "Tasuta karistus", type: "FREE_PENALTY", value: 0 }),
+] as { label: string; type: string; value: number }[];
 
 type WheelModalProps = {
   open: boolean;
@@ -59,7 +58,9 @@ export function WheelModal({ open, onOpenChange, onSpun }: WheelModalProps) {
         if (outcome.type === "CREDITS") {
           toast({ title: `Sa võitsid ${outcome.value} krediiti!` });
         } else if (outcome.type === "FREE_PENALTY") {
-          toast({ title: "Sa võitsid tasuta 15 min pausi!" });
+          toast({ title: "Sa võitsid tasuta karistuse!" });
+        } else if (outcome.type === "HALF_OFF_PENALTY") {
+          toast({ title: "Sa võitsid 50% soodustuse järgmisele karistusele!" });
         } else {
           toast({ title: "Rohkem õnne järgmisel korral!" });
         }
@@ -106,6 +107,7 @@ export function WheelModal({ open, onOpenChange, onSpun }: WheelModalProps) {
               >
                 {result.type === "CREDITS" && `Sa võitsid ${result.value} krediiti!`}
                 {result.type === "FREE_PENALTY" && "Sa võitsid tasuta karistuse!"}
+                {result.type === "HALF_OFF_PENALTY" && "Sa võitsid 50% soodustuse järgmisele karistusele!"}
                 {result.type === "NOTHING" && "Seekord midagi ei tulnud!"}
               </motion.p>
             )}

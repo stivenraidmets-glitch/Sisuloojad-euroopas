@@ -70,10 +70,10 @@ async function main() {
   });
 
   const defaultWheelOutcomes = JSON.stringify([
-    { type: "CREDITS", value: 10, probability: 40 },
-    { type: "CREDITS", value: 25, probability: 20 },
+    { type: "NOTHING", value: 0, probability: 50 },
+    { type: "RESPIN", value: 0, probability: 25 },
+    { type: "HALF_OFF_PENALTY", value: 50, probability: 15 },
     { type: "FREE_PENALTY", value: 0, probability: 10 },
-    { type: "NOTHING", value: 0, probability: 30 },
   ]);
   await prisma.wheelConfig.upsert({
     where: { id: "default" },
