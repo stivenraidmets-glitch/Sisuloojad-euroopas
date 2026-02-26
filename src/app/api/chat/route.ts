@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getOrCreateSystemUser } from "@/lib/chat-notify";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_LENGTH = 500;
 const MAX_MESSAGES = 100;
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+const CMD_RESET_DISTANCE = "/reset-distance";
 
 export async function GET() {
   try {
@@ -42,6 +50,31 @@ export async function POST(req: Request) {
     const text = typeof body.body === "string" ? body.body.trim().slice(0, MAX_BODY_LENGTH) : "";
     if (!text) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    // Admin command: reset both teams' traveled distance
+    if (text.toLowerCase() === CMD_RESET_DISTANCE) {
+      const email = session.user.email.toLowerCase();
+      if (!ADMIN_EMAILS.includes(email)) {
+        return NextResponse.json({ error: "Vain administraatorid saavad seda käsku kasutada." }, { status: 403 });
+      }
+      await prisma.team.updateMany({
+        data: { totalDistanceKm: 0 },
+      });
+      const systemUserId = await getOrCreateSystemUser();
+      const systemMsg = await prisma.chatMessage.create({
+        data: {
+          userId: systemUserId,
+          body: "✅ Admin resetas meeskondade läbitud distantsi.",
+        },
+        include: { user: { select: { email: true, name: true } } },
+      });
+      return NextResponse.json({
+        id: systemMsg.id,
+        body: systemMsg.body,
+        userName: systemMsg.user.name?.trim() || systemMsg.user.email,
+        createdAt: systemMsg.createdAt.toISOString(),
+      });
     }
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
