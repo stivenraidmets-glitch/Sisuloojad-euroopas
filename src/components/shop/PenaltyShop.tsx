@@ -100,7 +100,8 @@ export function PenaltyShop({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
-      if (data.url) window.location.href = data.url;
+      if (data.redirectUrl) window.location.href = data.redirectUrl;
+      else if (data.url) window.location.href = data.url;
       else toast({ title: "Suunan maksma…" });
     } catch (e) {
       toast({
