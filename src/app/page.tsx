@@ -5,7 +5,7 @@ import { RaceMap } from "@/components/map/RaceMap";
 import { VoteModule } from "@/components/vote/VoteModule";
 import { PenaltyShop } from "@/components/shop/PenaltyShop";
 import { HomeClient } from "./HomeClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RecentPenaltiesCard } from "@/components/home/RecentPenaltiesCard";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +41,7 @@ async function getRecentPenalties() {
     include: {
       penaltyOption: { select: { title: true } },
       team: { select: { name: true } },
+      purchasedBy: { select: { name: true, email: true } },
     },
   });
 }
@@ -104,32 +105,15 @@ export default async function HomePage() {
         }))}
       />
 
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>Viimased karistused</CardTitle>
-            <CardDescription>Hiljuti ostetud sekkumised</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {recentPenalties.length === 0 ? (
-                <li className="text-muted-foreground">Karistusi veel pole.</li>
-              ) : (
-                recentPenalties.map((p) => (
-                  <li key={p.id} className="flex justify-between text-sm">
-                    <span>
-                      <strong>{p.penaltyOption?.title ?? "—"}</strong> → {p.team?.name ?? "—"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {p.status} · {p.createdAt.toLocaleString()}
-                    </span>
-                  </li>
-                ))
-              )}
-            </ul>
-          </CardContent>
-        </Card>
-      </section>
+      <RecentPenaltiesCard
+        penalties={recentPenalties.map((p) => ({
+          id: p.id,
+          title: p.penaltyOption?.title ?? "—",
+          teamName: p.team?.name ?? "—",
+          buyerName: p.purchasedBy?.name?.trim() || p.purchasedBy?.email || "—",
+          createdAt: p.createdAt.toISOString(),
+        }))}
+      />
     </div>
   );
 }
