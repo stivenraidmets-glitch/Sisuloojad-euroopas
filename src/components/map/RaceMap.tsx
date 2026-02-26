@@ -214,7 +214,7 @@ export function RaceMap({
   }
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-muted/40 shadow-lg shadow-black/20 backdrop-blur-sm">
+    <div className="relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10">
       <div ref={mapRef} className="h-[400px] w-full" />
       {!hasValidPositions && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/50">

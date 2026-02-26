@@ -4,25 +4,26 @@
 
 @layer base {
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 40% 9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 187 85% 53%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 217 33% 12%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 12%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 187 85% 53%;
-    --accent-foreground: 222 47% 6%;
+    /* Simple dark – neutral base, subtle violet accent (Rizz Rater–style) */
+    --background: 240 10% 4%;
+    --foreground: 240 5% 96%;
+    --card: 240 8% 7%;
+    --card-foreground: 240 5% 96%;
+    --primary: 263 70% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 240 5% 96%;
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 4% 55%;
+    --accent: 263 70% 58%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 187 85% 53%;
-    --radius: 0.625rem;
-    --glow: 187 85% 53%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 16%;
+    --input: 240 6% 16%;
+    --ring: 263 70% 58%;
+    --radius: 0.5rem;
+    --glow: 263 70% 58%;
   }
 
   .light {
@@ -30,7 +31,7 @@
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    --primary: 187 85% 45%;
+    --primary: 263 70% 50%;
     --primary-foreground: 255 255 255;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -55,29 +56,41 @@
   }
 }
 
+/* Smooth moving background orbs */
 @keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  33% { transform: translate(40px, -30px) scale(1.08); opacity: 0.5; }
+  66% { transform: translate(-30px, 25px) scale(0.92); opacity: 0.65; }
+}
+
+@keyframes blob-slow {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-20px, -15px); }
 }
 
 @keyframes grid-shift {
   0% { transform: translate(0, 0); }
-  100% { transform: translate(60px, 60px); }
+  100% { transform: translate(50px, 50px); }
 }
 
 .animate-blob {
-  animation: blob 8s ease-in-out infinite;
+  animation: blob 12s ease-in-out infinite;
+}
+
+.animate-blob-slow {
+  animation: blob-slow 20s ease-in-out infinite;
 }
 
 .animation-delay-2000 { animation-delay: 2s; }
-.animation-delay-4000 { animation-delay: 4s; }
+.animation-delay-4000 { animation-delay: 5s; }
+.animation-delay-6000 { animation-delay: 8s; }
 
 .grid-bg {
   background-image:
-    linear-gradient(rgba(34, 211, 238, 0.6) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.6) 1px, transparent 1px);
-  animation: grid-shift 25s linear infinite;
+    linear-gradient(rgba(139, 92, 246, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.15) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-shift 40s linear infinite;
 }
 
 /* Mapbox overrides for dark theme */

@@ -48,7 +48,13 @@ function SignupContent() {
         redirect: false,
       });
       if (signInRes?.error) {
-        setError("Magilinki ei saadetud. Kontrolli, et e-mail on õige.");
+        const errMsg =
+          signInRes.error === "EmailSignin"
+            ? "E-kirja saatmine ebaõnnestus. Kontrolli Resend dashboard’is, et domeen on kinnitatud või kasuta sama e-maili, millega Resend kontot lõid."
+            : typeof signInRes.error === "string"
+              ? signInRes.error
+              : "Magilinki ei saadetud. Kontrolli Vercel env (EMAIL_SERVER, EMAIL_FROM) ja Resend seadeid.";
+        setError(errMsg);
         return;
       }
       setSent(true);
@@ -123,6 +129,9 @@ function SignupContent() {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Saadan…" : "Registreeru ja saada magilink"}
                 </Button>
+                <p className="text-xs text-muted-foreground">
+                  Kui magilink ei jõua: vaata ka rämpsposti. Resend test-saatja (onboarding@resend.dev) võib nõuda domeeni kinnitamist – lisa oma domeen Resend dashboard’is.
+                </p>
               </form>
             ) : null}
             <p className="text-center text-sm text-muted-foreground">

@@ -10,7 +10,7 @@ export function Header() {
   const { data: session, status } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50 shadow-[0_0_30px_-10px_rgba(34,211,238,0.15)]">
+    <header className="sticky top-0 z-40 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl dark:bg-background/70">
       <div className="container flex h-14 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <MapPin className="h-5 w-5 text-primary" />

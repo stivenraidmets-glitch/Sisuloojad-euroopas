@@ -85,6 +85,8 @@ git push -u origin main
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Your Mapbox token (pk.eyJ...) |
 | `ADMIN_EMAILS` | Your email, e.g. stivenraidmets@gmail.com |
 | `BROADCAST_SECRET` | Optional. A secret word for the broadcast URL. If not set, use `?secret=broadcast` in the broadcast link. |
+| `EMAIL_SERVER` | **For magic link login.** SMTP URL, e.g. Resend: `smtp://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465` (see “Magic link login” below). |
+| `EMAIL_FROM` | **For magic link login.** Sender address, e.g. `noreply@yourdomain.com` (must be allowed by your email provider). |
 | `ENABLE_DEV_LOGIN` | Leave empty (delete or leave blank in production) |
 | `NEXT_PUBLIC_ENABLE_DEV_LOGIN` | Leave empty |
 
@@ -136,6 +138,22 @@ git push
 ```
 
 Vercel will redeploy automatically. After 1–2 minutes, open your **.vercel.app** link.
+
+---
+
+## Magic link (email) login
+
+For “Saada magilink” to work, the app must be able to send email. Add these in Vercel → Environment Variables, then redeploy:
+
+1. **EMAIL_SERVER** – SMTP URL. Example with **Resend** (free tier):
+   - Sign up at https://resend.com and get an API key.
+   - In Resend, add and verify a domain (or use their test domain for development).
+   - Set: `EMAIL_SERVER=smtp://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465`
+   - Set: `EMAIL_FROM=onboarding@resend.dev` (or your verified sender, e.g. `noreply@yourdomain.com`).
+
+2. **EMAIL_FROM** – The “From” address. It must be a sender your provider allows (Resend: use their test domain or your verified domain).
+
+3. **Redeploy** after adding the variables. Then try “Saada magilink” again; the login page will show “Magilink pole seadistatud” until `EMAIL_SERVER` is set.
 
 ---
 

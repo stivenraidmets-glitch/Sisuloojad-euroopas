@@ -37,3 +37,6 @@ prisma/dev.db-journal
 .vscode
 *.swp
 *.swo
+
+# env paste file (contains secrets)
+vercel-env-resend.txt
