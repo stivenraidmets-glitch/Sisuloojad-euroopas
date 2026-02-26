@@ -115,7 +115,7 @@ export function RaceMap({
         setTeams((prev) =>
           prev.map((t) => {
             const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
-            const defaultPos = DEFAULT_POSITIONS[t.id];
+            const defaultPos = DEFAULT_POSITIONS[t.teamId];
             if (!fromApi) return t;
             if (fromApi.lastLat != null && fromApi.lastLng != null) {
               return {
