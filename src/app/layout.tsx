@@ -9,8 +9,8 @@ import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Paris → Tallinn võistlus (rahata)",
-  description: "Jälgi võistlust kaardil reaalajas. Hääleta, osta sekkumisi, keeruta ratast.",
+  title: "Alustame Nullist · Pariis – Tallinn",
+  description: "4 sisuloojat alustavad võistlusega Pariisist. Jälgi tiime kaardil reaalajas, hääleta, osta karistusi ja keeruta loosratast.",
 };
 
 export default function RootLayout({

@@ -14,7 +14,7 @@ export function Header() {
       <div className="container flex h-14 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <MapPin className="h-5 w-5 text-primary" />
-          <span className="hidden sm:inline">Paris → Tallinn võistlus</span>
+          <span className="hidden sm:inline">Alustame Nullist</span>
         </Link>
         <nav className="flex items-center gap-2">
           <Link href="/team/1">
