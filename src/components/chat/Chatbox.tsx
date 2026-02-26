@@ -65,13 +65,13 @@ export function Chatbox() {
   if (status !== "authenticated") return null;
 
   return (
-    <aside className="hidden w-full flex-col border-l bg-card md:flex md:w-[320px] md:flex-shrink-0">
-      <div className="flex items-center gap-2 border-b px-3 py-2">
+    <aside className="hidden h-[calc(100vh-3.5rem)] w-full flex-col border-l bg-card md:flex md:w-[320px] md:flex-shrink-0 md:sticky md:top-14">
+      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
         <MessageCircle className="h-5 w-5 text-muted-foreground" />
         <h2 className="font-semibold text-sm">Vestlus</h2>
       </div>
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <ul className="flex-1 space-y-2 overflow-y-auto p-3 text-sm">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 text-sm">
           {messages.length === 0 && (
             <li className="text-muted-foreground py-4 text-center text-xs">
               Siin pole veel sõnumeid. Alusta vestlust!
@@ -93,7 +93,7 @@ export function Chatbox() {
           ))}
           <div ref={bottomRef} />
         </ul>
-        <form onSubmit={handleSubmit} className="flex gap-2 border-t p-2">
+        <form onSubmit={handleSubmit} className="flex shrink-0 gap-2 border-t p-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
