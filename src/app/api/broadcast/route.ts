@@ -16,9 +16,19 @@ export async function POST(req: Request) {
     }
 
     const { lat, lng, teamId, secret } = parsed.data;
+    const secretTrimmed = typeof secret === "string" ? secret.trim() : "";
 
-    if (secret !== process.env.BROADCAST_SECRET) {
-      return NextResponse.json({ error: "Invalid secret" }, { status: 403 });
+    const expectedSecret = (process.env.BROADCAST_SECRET || "").trim();
+    const allowedSecrets = ["broadcast"];
+    if (expectedSecret.length > 0) allowedSecrets.push(expectedSecret);
+    const allowed = allowedSecrets.some((s) => s === secretTrimmed);
+    if (!allowed || secretTrimmed.length === 0) {
+      return NextResponse.json(
+        {
+          error: "Invalid secret. Use ?secret=broadcast in the URL, or the same value as BROADCAST_SECRET in Vercel.",
+        },
+        { status: 403 }
+      );
     }
 
     const now = Date.now();

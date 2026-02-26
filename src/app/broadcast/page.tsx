@@ -15,8 +15,11 @@ function BroadcastContent() {
   const [lastSent, setLastSent] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const searchParams = useSearchParams();
-  const secret = searchParams.get("secret") ?? "";
+  const secretFromUrl = (searchParams.get("secret") ?? "").trim();
   const { toast } = useToast();
+
+  const secretToSend =
+    secretFromUrl || (process.env.NEXT_PUBLIC_BROADCAST_SECRET || "").trim() || "broadcast";
 
   const sendLocation = useCallback(
     (lat: number, lng: number) => {
@@ -27,7 +30,7 @@ function BroadcastContent() {
           lat,
           lng,
           teamId,
-          secret: secret || process.env.NEXT_PUBLIC_BROADCAST_SECRET,
+          secret: secretToSend,
         }),
       })
         .then(async (res) => {
@@ -37,16 +40,12 @@ function BroadcastContent() {
         })
         .catch(() => toast({ title: "Võrgu viga", variant: "destructive" }));
     },
-    [teamId, secret, toast]
+    [teamId, secretToSend, toast]
   );
 
   const startSharing = () => {
     if (!navigator.geolocation) {
       toast({ title: "Asukoha jagamine pole toetatud", variant: "destructive" });
-      return;
-    }
-    if (!secret && !process.env.NEXT_PUBLIC_BROADCAST_SECRET) {
-      toast({ title: "Lisa URL-i ?secret=SINU_SALASÕNA", variant: "destructive" });
       return;
     }
     setSharing(true);
@@ -92,11 +91,11 @@ function BroadcastContent() {
               <option value={2}>Meeskond 2</option>
             </select>
           </div>
-          {!secret && (
-            <p className="text-sm text-amber-600">
-              Lisa URL-i ?secret=SINU_SALASÕNA.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {secretFromUrl
+              ? `Salasõna URL-is: ${secretFromUrl}`
+              : "Kasutatakse vaikimisi salasõna (broadcast). Võid lisada URL-i ?secret=broadcast."}
+          </p>
           {sharing ? (
             <Button variant="destructive" onClick={stopSharing} className="w-full">
               Lõpeta jagamine
