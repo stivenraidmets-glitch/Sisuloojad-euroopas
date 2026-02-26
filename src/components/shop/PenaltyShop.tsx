@@ -40,16 +40,19 @@ export function PenaltyShop({
     hasPrize: boolean;
     result: { type: string } | null;
     isRedeemed: boolean;
+    freePenaltyBalance?: number;
   } | null>(null);
   const [redeemOptionId, setRedeemOptionId] = useState("");
   const [redeemTeamId, setRedeemTeamId] = useState<number>(fixedTeamId ?? 1);
   const [redeeming, setRedeeming] = useState(false);
   const { toast } = useToast();
   const singleTeam = fixedTeamId != null;
+  const freeBalance = winnings?.freePenaltyBalance ?? 0;
   const canRedeemFree =
-    winnings?.hasPrize &&
-    winnings?.result?.type === "FREE_PENALTY" &&
-    !winnings?.isRedeemed;
+    freeBalance > 0 ||
+    (winnings?.hasPrize &&
+      winnings?.result?.type === "FREE_PENALTY" &&
+      !winnings?.isRedeemed);
   const hasHalfOff =
     winnings?.hasPrize &&
     winnings?.result?.type === "HALF_OFF_PENALTY" &&
@@ -64,6 +67,7 @@ export function PenaltyShop({
             hasPrize: data.hasPrize ?? false,
             result: data.result ?? null,
             isRedeemed: data.isRedeemed ?? false,
+            freePenaltyBalance: data.freePenaltyBalance ?? 0,
           });
       })
       .catch(() => setWinnings(null));
@@ -154,7 +158,7 @@ export function PenaltyShop({
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
             <p className="mb-3 flex items-center gap-2 font-medium text-primary">
               <Gift className="h-4 w-4" />
-              Kasuta tasuta karistust
+              {freeBalance > 0 ? `${freeBalance} tasuta karistust` : "Kasuta tasuta karistust"}
             </p>
             <div className="flex flex-wrap items-end gap-2">
               <div className="min-w-[140px] flex-1">

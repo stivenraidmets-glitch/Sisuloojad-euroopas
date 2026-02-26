@@ -12,22 +12,38 @@ export async function GET() {
   }
 
   try {
-    const spin = await prisma.wheelSpin.findUnique({
-      where: { userId: (session.user as { id: string }).id },
-      select: { resultType: true, value: true, redeemedAt: true, createdAt: true },
-    });
+    const userId = (session.user as { id: string }).id;
+    const [user, spin] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { freePenaltyBalance: true },
+      }),
+      prisma.wheelSpin.findUnique({
+        where: { userId },
+        select: { resultType: true, value: true, redeemedAt: true, createdAt: true },
+      }),
+    ]);
+
+    const freeBalance = user?.freePenaltyBalance ?? 0;
+    const hasWheelFree = spin?.resultType === "FREE_PENALTY" && spin.redeemedAt == null;
+    const hasFreePrize = freeBalance > 0 || hasWheelFree;
 
     if (!spin) {
       return NextResponse.json({
         hasSpun: false,
         result: null,
+        freePenaltyBalance: freeBalance,
+        hasPrize: freeBalance > 0,
+        isRedeemed: false,
       });
     }
 
     const hasPrize =
-      spin.resultType === "FREE_PENALTY" ||
+      hasFreePrize ||
       spin.resultType === "HALF_OFF_PENALTY" ||
       spin.resultType === "CREDITS";
+
+    const freeRedeemed = freeBalance === 0 && (spin.resultType !== "FREE_PENALTY" || spin.redeemedAt != null);
 
     return NextResponse.json({
       hasSpun: true,
@@ -36,8 +52,9 @@ export async function GET() {
         value: spin.value,
         redeemedAt: spin.redeemedAt?.toISOString() ?? null,
       },
+      freePenaltyBalance: freeBalance,
       hasPrize,
-      isRedeemed: spin.redeemedAt != null,
+      isRedeemed: freeRedeemed,
     });
   } catch (e) {
     console.error("Winnings GET error:", e);

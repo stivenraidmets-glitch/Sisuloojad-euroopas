@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, freePenaltyBalance: true },
     });
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -35,11 +35,11 @@ export async function POST(req: Request) {
     const wheelSpin = await prisma.wheelSpin.findUnique({
       where: { userId: user.id },
     });
-    if (
-      !wheelSpin ||
-      wheelSpin.resultType !== "FREE_PENALTY" ||
-      wheelSpin.redeemedAt != null
-    ) {
+    const canUseBalance = (user.freePenaltyBalance ?? 0) > 0;
+    const canUseWheel =
+      wheelSpin?.resultType === "FREE_PENALTY" && wheelSpin.redeemedAt == null;
+
+    if (!canUseBalance && !canUseWheel) {
       return NextResponse.json(
         { error: "Sul pole kasutamata tasuta karistust." },
         { status: 400 }
@@ -78,10 +78,17 @@ export async function POST(req: Request) {
       },
     });
 
-    await prisma.wheelSpin.update({
-      where: { userId: user.id },
-      data: { redeemedAt: new Date() },
-    });
+    if (canUseBalance) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { freePenaltyBalance: { decrement: 1 } },
+      });
+    } else {
+      await prisma.wheelSpin.update({
+        where: { userId: user.id },
+        data: { redeemedAt: new Date() },
+      });
+    }
 
     const team = await prisma.team.findUnique({
       where: { id: teamId },

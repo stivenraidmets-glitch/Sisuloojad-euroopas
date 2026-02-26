@@ -17,9 +17,10 @@ model User {
   name           String?
   image          String?
   createdAt      DateTime  @default(now())
-  creditsBalance Int       @default(0)
-  hasSpunWheel   Boolean   @default(false)
-  accounts       Account[]
+  creditsBalance     Int       @default(0)
+  freePenaltyBalance Int       @default(0) // free punishments user can redeem
+  hasSpunWheel       Boolean   @default(false)
+  accounts           Account[]
   sessions       Session[]
   votes          Vote[]
   purchases      Purchase[]

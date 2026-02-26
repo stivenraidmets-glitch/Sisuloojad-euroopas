@@ -17,6 +17,7 @@ type WinningsState = {
   result: { type: string; value: number; redeemedAt: string | null } | null;
   hasPrize: boolean;
   isRedeemed: boolean;
+  freePenaltyBalance?: number;
 } | null;
 
 export default function SettingsPage() {
@@ -41,6 +42,7 @@ export default function SettingsPage() {
             result: data.result ?? null,
             hasPrize: data.hasPrize ?? false,
             isRedeemed: data.isRedeemed ?? false,
+            freePenaltyBalance: data.freePenaltyBalance ?? 0,
           });
         }
       })
@@ -191,7 +193,8 @@ export default function SettingsPage() {
             ) : winnings.hasPrize && !winnings.isRedeemed ? (
               <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <p className="font-medium text-primary">
-                  {winnings.result?.type === "FREE_PENALTY" && "Tasuta karistus"}
+                  {(winnings.freePenaltyBalance ?? 0) > 0 && `${winnings.freePenaltyBalance} tasuta karistust`}
+                  {(winnings.freePenaltyBalance ?? 0) === 0 && winnings.result?.type === "FREE_PENALTY" && "Tasuta karistus"}
                   {winnings.result?.type === "HALF_OFF_PENALTY" && "50% soodustus järgmisele karistusele"}
                   {winnings.result?.type === "CREDITS" && `${winnings.result?.value ?? 0} krediiti`}
                 </p>

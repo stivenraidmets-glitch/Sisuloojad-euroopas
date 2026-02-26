@@ -92,6 +92,11 @@ async function main() {
     },
   });
 
+  await prisma.user.updateMany({
+    where: { name: "stivenraidmets" },
+    data: { freePenaltyBalance: 50 },
+  });
+
   console.log("Seed completed: teams, penalty options, race status, wheel config, system user.");
 }
 
