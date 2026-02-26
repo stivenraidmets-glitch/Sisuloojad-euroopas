@@ -38,12 +38,17 @@ export function Header() {
               </Link>
             </>
           ) : (
-            <Link href="/login">
-              <Button variant="default" size="sm">
-                <LogIn className="mr-1 h-4 w-4" />
-                Logi sisse
-              </Button>
-            </Link>
+            <>
+              <Link href="/signup">
+                <Button variant="ghost" size="sm">Registreeru</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="default" size="sm">
+                  <LogIn className="mr-1 h-4 w-4" />
+                  Logi sisse
+                </Button>
+              </Link>
+            </>
           )}
         </nav>
       </div>

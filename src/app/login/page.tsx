@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { Suspense, useState, useEffect } from "react";
+import { signIn, getProviders } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -16,21 +16,27 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [emailProviderAvailable, setEmailProviderAvailable] = useState<boolean | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const errorParam = searchParams.get("error");
+
+  useEffect(() => {
+    getProviders().then((p) => setEmailProviderAvailable(p?.email != null));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
     try {
-      await signIn("email", {
+      const res = await signIn("email", {
         email: email.trim(),
         callbackUrl,
         redirect: false,
       });
-      setSent(true);
+      if (res?.error) setSent(false);
+      else setSent(true);
     } finally {
       setLoading(false);
     }
@@ -63,9 +69,11 @@ function LoginContent() {
           <CardHeader>
             <CardTitle>Logi sisse</CardTitle>
             <CardDescription>
-              {devLoginEnabled
-                ? "Kasuta allolevat nuppu kiirkatsetuseks või saada magilink."
-                : "Sisesta oma e-mail. Saadame sulle magilinki."}
+              {emailProviderAvailable === false
+                ? "Magilink pole seadistatud. Lisa Vercelis EMAIL_SERVER ja EMAIL_FROM (vt allpool) või kasuta kiirsisselogimist."
+                : devLoginEnabled
+                  ? "Kasuta allolevat nuppu kiirkatsetuseks või saada magilink."
+                  : "Sisesta oma e-mail. Saadame sulle magilinki."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -92,12 +100,20 @@ function LoginContent() {
                 </Button>
               </div>
             )}
+            {emailProviderAvailable === false && (
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-200">Magilink vajab seadistamist</p>
+                <p className="mt-1 text-muted-foreground">
+                  Vercel → Settings → Environment Variables. Lisa <strong>EMAIL_SERVER</strong> (nt Resend SMTP: <code className="text-xs">smtp://resend:RESEND_API_KEY@smtp.resend.com:465</code>) ja <strong>EMAIL_FROM</strong> (saatja aadress). Seejärel redeploy.
+                </p>
+              </div>
+            )}
             {sent ? (
               <p className="text-sm text-muted-foreground">
                 Kontrolli oma postkasti sisselogimislinki järele. Võid pärast
                 klõpsamist selle vaheala sulgeda.
               </p>
-            ) : (
+            ) : emailProviderAvailable !== false ? (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
@@ -115,8 +131,13 @@ function LoginContent() {
                   {loading ? "Saadan…" : "Saada magilink"}
                 </Button>
               </form>
-            )}
+            ) : null}
             <p className="text-center text-sm text-muted-foreground">
+              Pole veel kontot?{" "}
+              <Link href={`/signup${callbackUrl !== "/" ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`} className="underline hover:text-foreground">
+                Registreeru
+              </Link>
+              {" · "}
               <Link href="/" className="underline hover:text-foreground">
                 Tagasi avalehele
               </Link>

@@ -68,6 +68,14 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
+// Stores username (name) when user signs up before clicking magic link
+model PendingSignup {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+}
+
 model Team {
   id              Int       @id
   name            String

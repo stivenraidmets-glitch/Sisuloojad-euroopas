@@ -55,17 +55,31 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user }) {
       if (user?.email) {
+        const pending = await prisma.pendingSignup.findUnique({
+          where: { email: user.email },
+        });
+        const nameToSet = pending?.name ?? user.name ?? null;
+
         const existing = await prisma.user.findUnique({ where: { email: user.email } });
         if (!existing) {
           await prisma.user.create({
             data: {
               email: user.email,
-              name: user.name ?? null,
+              name: nameToSet,
               image: user.image ?? null,
               creditsBalance: 0,
               hasSpunWheel: false,
             },
           });
+        } else if (nameToSet) {
+          await prisma.user.update({
+            where: { email: user.email },
+            data: { name: nameToSet },
+          });
+        }
+
+        if (pending) {
+          await prisma.pendingSignup.delete({ where: { email: user.email } }).catch(() => {});
         }
       }
       return true;
