@@ -6,6 +6,8 @@ import { PenaltyShop } from "@/components/shop/PenaltyShop";
 import { HomeClient } from "./HomeClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
 async function getTeams() {
   return prisma.team.findMany({
     orderBy: { id: "asc" },

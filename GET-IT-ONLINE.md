@@ -14,7 +14,7 @@ Later you can add a custom domain (e.g. zone.ee) if you want.
 | **1** | Create a GitHub repo and push your code (see Step 1 below). |
 | **2** | Create a Neon project at neon.tech and copy the **connection string** (DATABASE_URL). |
 | **3** | In Vercel: Import the repo, add all **Environment Variables** (Step 3 table), then click **Deploy**. |
-| **4** | In Terminal: set `DATABASE_URL` to your Neon URL, run `npx prisma db push` then `npx prisma db seed` (Step 4). |
+| **4** | In Terminal: set `DATABASE_URL` to your Neon URL, run `npx prisma db push` then `npx prisma db seed` (Step 4). You can do this **before or after** the first deploy; the build will succeed either way, but the site will only work once the tables exist. |
 | **5** | Set **NEXTAUTH_URL** in Vercel to your exact live URL (e.g. `https://your-project.vercel.app`), then **Redeploy** (Step 5). |
 | **6** | Open your site; use `/broadcast?secret=YOUR_BROADCAST_SECRET` to share location. |
 
