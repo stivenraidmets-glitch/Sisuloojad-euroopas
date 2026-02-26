@@ -14,14 +14,14 @@ export async function GET() {
       orderBy: { createdAt: "asc" },
       take: MAX_MESSAGES,
       include: {
-        user: { select: { email: true } },
+        user: { select: { email: true, name: true } },
       },
     });
     return NextResponse.json(
       messages.map((m) => ({
         id: m.id,
         body: m.body,
-        userEmail: m.user.email,
+        userName: m.user.name?.trim() || m.user.email,
         createdAt: m.createdAt.toISOString(),
       }))
     );
@@ -49,12 +49,12 @@ export async function POST(req: Request) {
 
     const message = await prisma.chatMessage.create({
       data: { userId: user.id, body: text },
-      include: { user: { select: { email: true } } },
+      include: { user: { select: { email: true, name: true } } },
     });
     return NextResponse.json({
       id: message.id,
       body: message.body,
-      userEmail: message.user.email,
+      userName: message.user.name?.trim() || message.user.email,
       createdAt: message.createdAt.toISOString(),
     });
   } catch (e) {

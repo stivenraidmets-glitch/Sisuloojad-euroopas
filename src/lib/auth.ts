@@ -85,16 +85,25 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
+      let dbUser: { id: string; email: string; name: string | null; hasSpunWheel: boolean } | null = null;
       if (user?.email) {
-        token.email = user.email;
-        const dbUser =
-          (user as { id?: string }).id
-            ? await prisma.user.findUnique({ where: { id: (user as { id: string }).id } })
-            : await prisma.user.findUnique({ where: { email: user.email } });
-        if (dbUser) {
-          token.userId = dbUser.id;
-          token.hasSpunWheel = dbUser.hasSpunWheel;
-        }
+        dbUser = await prisma.user.findUnique({
+          where: (user as { id?: string }).id
+            ? { id: (user as { id: string }).id }
+            : { email: user.email },
+          select: { id: true, email: true, name: true, hasSpunWheel: true },
+        });
+      } else if (token.userId) {
+        dbUser = await prisma.user.findUnique({
+          where: { id: token.userId as string },
+          select: { id: true, email: true, name: true, hasSpunWheel: true },
+        });
+      }
+      if (dbUser) {
+        token.userId = dbUser.id;
+        token.email = dbUser.email;
+        token.name = dbUser.name ?? null;
+        token.hasSpunWheel = dbUser.hasSpunWheel;
       }
       return token;
     },
@@ -102,6 +111,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { id?: string }).id = token.userId as string;
         (session.user as { hasSpunWheel?: boolean }).hasSpunWheel = token.hasSpunWheel as boolean;
+        (session.user as { name?: string | null }).name = (token.name as string | null) ?? null;
       }
       return session;
     },

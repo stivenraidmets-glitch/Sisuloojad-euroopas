@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { MapPin, LogIn, LogOut } from "lucide-react";
+import { MapPin, LogIn, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -28,9 +28,14 @@ export function Header() {
             <span className="text-sm text-muted-foreground">...</span>
           ) : session ? (
             <>
-              <span className="max-w-[120px] truncate text-sm text-muted-foreground">
-                {session.user?.email}
+              <span className="max-w-[140px] truncate text-sm text-muted-foreground" title={session.user?.email ?? undefined}>
+                {(session.user as { name?: string | null })?.name || session.user?.email}
               </span>
+              <Link href="/settings">
+                <Button variant="ghost" size="icon" title="Konto seaded">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
               <Link href="/api/auth/signout">
                 <Button variant="ghost" size="icon" title="Logi välja">
                   <LogOut className="h-4 w-4" />

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 type ChatMessage = {
   id: string;
   body: string;
-  userEmail: string | null;
+  userName: string;
   createdAt: string;
 };
 
@@ -81,7 +81,7 @@ export function Chatbox() {
           {messages.map((m) => (
             <li key={m.id} className="rounded-md bg-muted/50 px-2 py-1.5">
               <span className="font-medium text-muted-foreground">
-                {m.userEmail ?? "?"}
+                {m.userName}
               </span>
               <span className="ml-1.5 text-xs text-muted-foreground">
                 {new Date(m.createdAt).toLocaleTimeString("et-EE", {

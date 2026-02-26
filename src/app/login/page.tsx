@@ -20,6 +20,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
   const errorParam = searchParams.get("error");
+  const messageParam = searchParams.get("message");
 
   useEffect(() => {
     getProviders().then((p) => setEmailProviderAvailable(p?.email != null));
@@ -77,6 +78,11 @@ function LoginContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {messageParam === "email_changed" && (
+              <div className="rounded-md border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-300">
+                E-mail muudetud. Logi nüüd sisse uue e-maili aadressiga.
+              </div>
+            )}
             {errorParam && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                 <p className="font-medium">Sisselogimine ebaõnnestus</p>
