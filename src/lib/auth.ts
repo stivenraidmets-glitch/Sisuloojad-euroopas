@@ -6,6 +6,49 @@ import { prisma } from "./db";
 
 const isDevLoginEnabled = process.env.ENABLE_DEV_LOGIN === "1";
 
+function getResendApiKey(): string | null {
+  const server = process.env.EMAIL_SERVER?.trim();
+  if (!server) return null;
+  try {
+    const url = new URL(server);
+    return url.password || null;
+  } catch {
+    return null;
+  }
+}
+
+async function sendViaResendApi(params: {
+  identifier: string;
+  url: string;
+  provider: { from?: string };
+}) {
+  const apiKey = getResendApiKey();
+  if (!apiKey) throw new Error("EMAIL_SERVER missing or invalid");
+  const from = process.env.EMAIL_FROM?.trim() || params.provider.from || "noreply@localhost";
+  const host = new URL(params.url).host;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: params.identifier,
+      subject: `Logi sisse – ${host}`,
+      html: `<p><a href="${params.url}">Klõpsa siia, et sisse logida</a></p><p>Kui sa seda e-kirja ei tellinud, eira seda.</p>`,
+      text: `Logi sisse: ${params.url}\n\nKui sa seda e-kirja ei tellinud, eira seda.`,
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || data.error || `Resend API ${res.status}`);
+  }
+  return data;
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions["adapter"],
   providers: [
@@ -46,6 +89,9 @@ export const authOptions: NextAuthOptions = {
           EmailProvider({
             server: process.env.EMAIL_SERVER,
             from: process.env.EMAIL_FROM ?? "noreply@localhost",
+            sendVerificationRequest: async ({ identifier, url, provider }) => {
+              await sendViaResendApi({ identifier, url, provider });
+            },
           }),
         ]
       : []),
