@@ -24,10 +24,12 @@ async function getTeams() {
   const withPenalties = await Promise.all(
     teams.map(async (t) => {
       const { current, queued } = await getTeamPenaltyQueue(t.id);
+      // Map only shows pause/TIMEOUT penalties, not Ringtee ülesanne (DETOUR) etc.
+      const pauseOnly = (p: { type: string } | null) => p?.type === "TIMEOUT";
       return {
         ...t,
-        activePenalty: current,
-        queuedPenalties: queued,
+        activePenalty: pauseOnly(current) ? current : null,
+        queuedPenalties: queued.filter((q) => q.type === "TIMEOUT"),
       };
     })
   );

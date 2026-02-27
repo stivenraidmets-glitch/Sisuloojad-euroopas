@@ -9,6 +9,7 @@ export type CurrentPenalty = {
 
 export type QueuedPenalty = {
   title: string;
+  type: string;
   durationMinutes: number | null;
 };
 
@@ -75,6 +76,7 @@ export async function getTeamPenaltyQueue(teamId: number): Promise<{
         };
         const queued: QueuedPenalty[] = active.slice(i + 1).map((q) => ({
           title: q.penaltyOption?.title ?? "—",
+          type: q.penaltyOption?.type ?? "",
           durationMinutes: q.penaltyOption?.durationMinutes ?? null,
         }));
         return { current, queued };
@@ -91,6 +93,7 @@ export async function getTeamPenaltyQueue(teamId: number): Promise<{
       };
       const queued: QueuedPenalty[] = active.slice(i + 1).map((q) => ({
         title: q.penaltyOption?.title ?? "—",
+        type: q.penaltyOption?.type ?? "",
         durationMinutes: q.penaltyOption?.durationMinutes ?? null,
       }));
       return { current, queued };

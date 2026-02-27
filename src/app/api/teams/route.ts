@@ -22,10 +22,11 @@ export async function GET() {
     const withPenalties = await Promise.all(
       teams.map(async (t) => {
         const { current, queued } = await getTeamPenaltyQueue(t.id);
+        // Map only shows pause/TIMEOUT penalties, not Ringtee ülesanne (DETOUR) etc.
         return {
           ...t,
-          activePenalty: current,
-          queuedPenalties: queued,
+          activePenalty: current?.type === "TIMEOUT" ? current : null,
+          queuedPenalties: queued.filter((q) => q.type === "TIMEOUT"),
         };
       })
     );

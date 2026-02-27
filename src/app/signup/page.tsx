@@ -17,11 +17,16 @@ function SignupContent() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [emailProviderAvailable, setEmailProviderAvailable] = useState<boolean | null>(null);
+  const [emailHint, setEmailHint] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
 
   useEffect(() => {
     getProviders().then((p) => setEmailProviderAvailable(p?.email != null));
+    fetch("/api/email-status")
+      .then((r) => r.json())
+      .then((d) => setEmailHint(d.hint ?? null))
+      .catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -50,7 +55,7 @@ function SignupContent() {
       if (signInRes?.error) {
         const errMsg =
           signInRes.error === "EmailSignin"
-            ? "E-kirja saatmine ebaõnnestus. Kontrolli Resend dashboard’is, et domeen on kinnitatud või kasuta sama e-maili, millega Resend kontot lõid."
+            ? "Magilinki ei saadetud. Resend (onboarding@resend.dev) nõuab domeeni kinnitamist – mine resend.com/domains, lisa domeen, kinnita DNS, seadista Vercelis EMAIL_FROM ja redeploy."
             : typeof signInRes.error === "string"
               ? signInRes.error
               : "Magilinki ei saadetud. Kontrolli Vercel env (EMAIL_SERVER, EMAIL_FROM) ja Resend seadeid.";
@@ -86,6 +91,14 @@ function SignupContent() {
                 <p className="mt-1 text-muted-foreground">
                   Magilink (e-mail) pole seadistatud. Admin peab lisama Vercelis <strong>EMAIL_SERVER</strong> ja <strong>EMAIL_FROM</strong>. Kasuta <Link href="/login" className="underline">sisselogimise lehte</Link> kui sul on juba konto.
                 </p>
+              </div>
+            )}
+            {emailHint && canSignup && (
+              <div className="rounded-md border border-blue-500/30 bg-blue-500/10 p-3 text-sm text-blue-800 dark:text-blue-200">
+                {emailHint}{" "}
+                <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="underline">
+                  resend.com/domains
+                </a>
               </div>
             )}
             {error && (
@@ -130,7 +143,7 @@ function SignupContent() {
                   {loading ? "Saadan…" : "Registreeru ja saada magilink"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Kui magilink ei jõua: vaata ka rämpsposti. Resend test-saatja (onboarding@resend.dev) võib nõuda domeeni kinnitamist – lisa oma domeen Resend dashboard’is.
+                  Kui magilink ei jõua: vaata rämpsposti. onboarding@resend.dev nõuab kinnitatud domeeni – mine resend.com/domains, lisa domeen, kinnita DNS, seadista EMAIL_FROM.
                 </p>
               </form>
             ) : null}

@@ -16,6 +16,7 @@ function LoginContent() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
   const [emailProviderAvailable, setEmailProviderAvailable] = useState<boolean | null>(null);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
@@ -30,14 +31,25 @@ function LoginContent() {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
+    setError("");
     try {
       const res = await signIn("email", {
         email: email.trim(),
         callbackUrl,
         redirect: false,
       });
-      if (res?.error) setSent(false);
-      else setSent(true);
+      if (res?.error) {
+        setSent(false);
+        setError(
+          res.error === "EmailSignin"
+            ? "Magilinki ei saadetud. Resend nõuab domeeni kinnitamist – mine resend.com/domains, seadista EMAIL_FROM oma domeeniga."
+            : typeof res.error === "string"
+              ? res.error
+              : "E-kiri ei saadetud."
+        );
+      } else {
+        setSent(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -78,6 +90,11 @@ function LoginContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {error && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
             {messageParam === "email_changed" && (
               <div className="rounded-md border border-green-500/50 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-300">
                 E-mail muudetud. Logi nüüd sisse uue e-maili aadressiga.

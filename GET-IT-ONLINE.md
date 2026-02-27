@@ -149,7 +149,7 @@ For “Saada magilink” to work, the app must be able to send email. Add these 
    - Sign up at https://resend.com and get an API key.
    - In Resend, add and verify a domain (or use their test domain for development).
    - Set: `EMAIL_SERVER=smtp://resend:YOUR_RESEND_API_KEY@smtp.resend.com:465`
-   - Set: `EMAIL_FROM=onboarding@resend.dev` (or your verified sender, e.g. `noreply@yourdomain.com`).
+   - **Important:** `onboarding@resend.dev` often fails for arbitrary signups. Add and verify your domain at resend.com/domains, then set `EMAIL_FROM=noreply@yourdomain.com`.
 
 2. **EMAIL_FROM** – The “From” address. It must be a sender your provider allows (Resend: use their test domain or your verified domain).
 
