@@ -248,8 +248,6 @@ export function RaceMap({
               "line-color": ["get", "color"],
               "line-width": 3,
               "line-opacity": 0.7,
-              "line-cap": "round",
-              "line-join": "round",
             },
           },
           beforeId
