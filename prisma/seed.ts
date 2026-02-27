@@ -62,23 +62,6 @@ async function main() {
       type: "TIMEOUT",
     },
   });
-  await prisma.penaltyOption.upsert({
-    where: { id: "detour" },
-    update: {
-      title: "Ringtee ülesanne",
-      description: "Meeskond peab täitma ringtee ülesande",
-    },
-    create: {
-      id: "detour",
-      teamSpecific: true,
-      title: "Ringtee ülesanne",
-      description: "Meeskond peab täitma ringtee ülesande",
-      durationMinutes: null,
-      priceCents: 799,
-      type: "DETOUR",
-    },
-  });
-
   await prisma.raceStatus.upsert({
     where: { id: "default" },
     update: {},

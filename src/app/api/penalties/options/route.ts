@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const options = await prisma.penaltyOption.findMany({
+      where: { type: "TIMEOUT" },
       orderBy: { priceCents: "asc" },
     });
     return NextResponse.json(options);
