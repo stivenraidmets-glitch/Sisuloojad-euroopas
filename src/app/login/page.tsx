@@ -42,7 +42,7 @@ function LoginContent() {
         setSent(false);
         setError(
           res.error === "EmailSignin"
-            ? "Magilinki ei saadetud. Resend nõuab domeeni kinnitamist – mine resend.com/domains, seadista EMAIL_FROM oma domeeniga."
+            ? "Magilinki ei saadetud. Vaata resend.com/emails täpse vea järele. Kontrolli: EMAIL_FROM, NEXTAUTH_URL, redeploy pärast env muudatust."
             : typeof res.error === "string"
               ? res.error
               : "E-kiri ei saadetud."

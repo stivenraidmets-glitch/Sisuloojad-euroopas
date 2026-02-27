@@ -55,7 +55,7 @@ function SignupContent() {
       if (signInRes?.error) {
         const errMsg =
           signInRes.error === "EmailSignin"
-            ? "Magilinki ei saadetud. Resend (onboarding@resend.dev) nõuab domeeni kinnitamist – mine resend.com/domains, lisa domeen, kinnita DNS, seadista Vercelis EMAIL_FROM ja redeploy."
+            ? "Magilinki ei saadetud. Vaata resend.com/emails – seal on täpne viga. Tavapärane: domeen pole kinnitatud, vale API võti, NEXTAUTH_URL vale, või redeploy pärast env muudatust."
             : typeof signInRes.error === "string"
               ? signInRes.error
               : "Magilinki ei saadetud. Kontrolli Vercel env (EMAIL_SERVER, EMAIL_FROM) ja Resend seadeid.";
@@ -143,7 +143,7 @@ function SignupContent() {
                   {loading ? "Saadan…" : "Registreeru ja saada magilink"}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Kui magilink ei jõua: vaata rämpsposti. onboarding@resend.dev nõuab kinnitatud domeeni – mine resend.com/domains, lisa domeen, kinnita DNS, seadista EMAIL_FROM.
+                  Kui magilink ei jõua: vaata rämpsposti. Vaata ka resend.com/emails täpse vea järele.
                 </p>
               </form>
             ) : null}
