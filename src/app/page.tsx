@@ -39,7 +39,7 @@ async function getTeams() {
 async function getRecentPenalties() {
   return prisma.penalty.findMany({
     orderBy: { createdAt: "desc" },
-    take: 10,
+    take: 5,
     include: {
       penaltyOption: { select: { title: true } },
       team: { select: { name: true } },
