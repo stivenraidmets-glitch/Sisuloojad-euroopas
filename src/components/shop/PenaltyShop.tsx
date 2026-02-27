@@ -93,6 +93,8 @@ export function PenaltyShop({
     }
     setBuying(penaltyOptionId);
     try {
+      // Open popup immediately (same user gesture) to avoid popup blockers
+      const w = window.open("", "stripe-checkout", "width=500,height=700,scrollbars=yes");
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,9 +102,37 @@ export function PenaltyShop({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
-      if (data.redirectUrl) window.location.href = data.redirectUrl;
-      else if (data.url) window.location.href = data.url;
-      else toast({ title: "Suunan maksma…" });
+      const url = data.redirectUrl ?? data.url;
+      if (url) {
+        if (!w) {
+          // Popup blocked – fall back to redirect
+          window.location.href = url;
+          return;
+        }
+        w.location.href = url;
+        let checkClosed: ReturnType<typeof setInterval>;
+        const onMessage = (e: MessageEvent) => {
+          if (e.data?.type === "checkout-success" && e.data?.source === "sisuloojad") {
+            window.removeEventListener("message", onMessage);
+            clearInterval(checkClosed);
+            setBuying(null);
+            toast({ title: "Ost edukas! Karistus on aktiivne." });
+            fetchWinnings();
+            window.dispatchEvent(new CustomEvent("checkout-success"));
+          }
+        };
+        window.addEventListener("message", onMessage);
+        checkClosed = setInterval(() => {
+          if (w?.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener("message", onMessage);
+            setBuying(null);
+          }
+        }, 500);
+      } else {
+        toast({ title: "Suunan maksma…" });
+        setBuying(null);
+      }
     } catch (e) {
       toast({
         title: e instanceof Error ? e.message : "Ost ebaõnnestus",

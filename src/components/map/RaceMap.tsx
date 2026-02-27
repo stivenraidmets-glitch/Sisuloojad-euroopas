@@ -182,6 +182,13 @@ export function RaceMap({
     };
   }, [fetchTeams]);
 
+  // When buyer completes checkout (popup), refetch so map updates even if Pusher is slow
+  useEffect(() => {
+    const onCheckout = () => fetchTeams();
+    window.addEventListener("checkout-success", onCheckout);
+    return () => window.removeEventListener("checkout-success", onCheckout);
+  }, [fetchTeams]);
+
   // Countdown ticker for penalty timers
   useEffect(() => {
     const hasActive = teams.some((t) => t.activePenalty != null);

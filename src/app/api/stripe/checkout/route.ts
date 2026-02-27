@@ -71,7 +71,7 @@ export async function POST(req: Request) {
         select: { name: true },
       });
       if (team) await notifyPenaltyToChat(team.name, option.title, true);
-      return NextResponse.json({ redirectUrl: `${origin}/?checkout=success` });
+      return NextResponse.json({ redirectUrl: `${origin}/checkout-success?checkout=success` });
     }
 
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -111,8 +111,8 @@ export async function POST(req: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/?checkout=success`,
-      cancel_url: `${origin}/?checkout=cancelled`,
+      success_url: `${origin}/checkout-success?checkout=success`,
+      cancel_url: `${origin}/checkout-success?checkout=cancelled`,
       metadata: {
         userId: user.id,
         penaltyOptionId: option.id,

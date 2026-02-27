@@ -20,11 +20,28 @@ function formatMinutesAgo(iso: string): string {
 }
 
 export function RecentPenaltiesCard({
-  penalties,
+  penalties: initialPenalties,
 }: {
   penalties: PenaltyItem[];
 }) {
+  const [penalties, setPenalties] = useState(initialPenalties);
   const [, setTick] = useState(0);
+
+  useEffect(() => {
+    setPenalties(initialPenalties);
+  }, [initialPenalties]);
+
+  useEffect(() => {
+    const onCheckoutSuccess = () => {
+      fetch("/api/penalties/recent")
+        .then((r) => r.json())
+        .then((data) => Array.isArray(data) && setPenalties(data))
+        .catch(() => {});
+    };
+    window.addEventListener("checkout-success", onCheckoutSuccess);
+    return () => window.removeEventListener("checkout-success", onCheckoutSuccess);
+  }, []);
+
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60000);
     return () => clearInterval(interval);

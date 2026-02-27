@@ -14,6 +14,7 @@ export async function GET(req: Request) {
       include: {
         penaltyOption: { select: { title: true } },
         team: { select: { name: true } },
+        purchasedBy: { select: { name: true, email: true } },
       },
     });
 
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
       title: p.penaltyOption.title,
       status: p.status,
       createdAt: p.createdAt.toISOString(),
-      buyerLabel: `Viewer #${p.purchasedByUserId.slice(-4)}`,
+      buyerName: p.purchasedBy?.name?.trim() || p.purchasedBy?.email || "—",
     }));
 
     return NextResponse.json(list);
