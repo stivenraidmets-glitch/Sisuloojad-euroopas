@@ -289,7 +289,7 @@ export function RaceMap({
         </div>
       )}
       {teamsWithPenalty.length > 0 && (
-        <div className="absolute left-2 right-2 top-2 flex flex-col gap-2">
+        <div className="absolute left-2 top-2 flex w-fit max-w-[85%] flex-col gap-2">
           {teamsWithPenalty.map((t) => (
             <div
               key={t.teamId}
