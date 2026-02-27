@@ -58,15 +58,20 @@ export async function POST(req: Request) {
       if (addKm > MAX_KM_PER_UPDATE) addKm = 0;
     }
 
-    await prisma.team.update({
-      where: { id: teamId },
-      data: {
-        lastLat: displayLat,
-        lastLng: displayLng,
-        lastUpdatedAt: new Date(),
-        totalDistanceKm: { increment: addKm },
-      },
-    });
+    await prisma.$transaction([
+      prisma.team.update({
+        where: { id: teamId },
+        data: {
+          lastLat: displayLat,
+          lastLng: displayLng,
+          lastUpdatedAt: new Date(),
+          totalDistanceKm: { increment: addKm },
+        },
+      }),
+      prisma.teamLocationPoint.create({
+        data: { teamId, lat: displayLat, lng: displayLng },
+      }),
+    ]);
 
     if (process.env.PUSHER_APP_ID) {
       try {

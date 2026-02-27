@@ -78,16 +78,28 @@ model PendingSignup {
 }
 
 model Team {
-  id              Int       @id
-  name            String
-  color           String    // hex e.g. #3B82F6
-  lastLat         Float?
-  lastLng         Float?
-  lastUpdatedAt   DateTime?
-  totalDistanceKm Float     @default(0) // total km traveled (from location updates)
-  votes           Vote[]
-  penalties       Penalty[]
-  purchases       Purchase[]
+  id                Int                   @id
+  name              String
+  color             String                // hex e.g. #3B82F6
+  lastLat           Float?
+  lastLng           Float?
+  lastUpdatedAt     DateTime?
+  totalDistanceKm   Float                 @default(0) // total km traveled (from location updates)
+  votes             Vote[]
+  penalties         Penalty[]
+  purchases         Purchase[]
+  locationTrail     TeamLocationPoint[]
+}
+
+model TeamLocationPoint {
+  id        String   @id @default(cuid())
+  teamId    Int
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
 }
 
 model Vote {

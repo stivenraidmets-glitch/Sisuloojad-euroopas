@@ -10,6 +10,8 @@ const MAP_ZOOM = 4;
 const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
 const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
+const TRAILS_SOURCE_ID = "teams-trails";
+const TRAILS_LAYER_ID = "teams-trails-line";
 
 // Default positions when no location has been broadcast yet (Paris → Tallinn race)
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
@@ -82,6 +84,16 @@ export function RaceMap({
     })
   );
   const [now, setNow] = useState(() => new Date());
+  const [trails, setTrails] = useState<Record<number, { color: string; coordinates: [number, number][] }>>({});
+
+  const fetchTrails = useCallback(async () => {
+    try {
+      const res = await fetch("/api/teams/trails");
+      if (!res.ok) return;
+      const data = await res.json();
+      setTrails(data);
+    } catch (_) {}
+  }, []);
 
   const initMap = useCallback(() => {
     if (!mapRef.current || !accessToken) return;
@@ -161,6 +173,7 @@ export function RaceMap({
               : t
           )
         );
+        fetchTrails();
       });
       channel.bind("penalty-update", () => fetchTeams());
       cleanup = () => {
@@ -170,17 +183,21 @@ export function RaceMap({
       };
     });
     return () => cleanup?.();
-  }, [channelName, fetchTeams]);
+  }, [channelName, fetchTeams, fetchTrails]);
 
-  // Poll: soon, then every 30s. Pusher penalty-update triggers immediate refetch when someone buys.
+  // Poll: soon, then every 30s.
   useEffect(() => {
-    const t0 = setTimeout(fetchTeams, 500);
-    const interval = setInterval(fetchTeams, 30000);
+    const doFetch = () => {
+      fetchTeams();
+      fetchTrails();
+    };
+    const t0 = setTimeout(doFetch, 500);
+    const interval = setInterval(doFetch, 30000);
     return () => {
       clearTimeout(t0);
       clearInterval(interval);
     };
-  }, [fetchTeams]);
+  }, [fetchTeams, fetchTrails]);
 
   // When buyer completes checkout (popup), refetch so map updates even if Pusher is slow
   useEffect(() => {
@@ -196,6 +213,60 @@ export function RaceMap({
     const interval = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(interval);
   }, [teams]);
+
+  // Draw team trails (lines behind the dots)
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+
+    const trailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = Object.entries(
+      trails
+    ).map(([teamId, { color, coordinates }]) => ({
+      type: "Feature" as const,
+      properties: { teamId: Number(teamId), color },
+      geometry: { type: "LineString" as const, coordinates },
+    }));
+
+    const trailsData = {
+      type: "FeatureCollection" as const,
+      features: trailFeatures,
+    };
+
+    const applyTrails = () => {
+      if (!map.getSource(TRAILS_SOURCE_ID)) {
+        map.addSource(TRAILS_SOURCE_ID, {
+          type: "geojson",
+          data: trailsData,
+        });
+        const beforeId = map.getLayer(TEAMS_LAYER_ID) ? TEAMS_LAYER_ID : undefined;
+        map.addLayer(
+          {
+            id: TRAILS_LAYER_ID,
+            type: "line",
+            source: TRAILS_SOURCE_ID,
+            paint: {
+              "line-color": ["get", "color"],
+              "line-width": 3,
+              "line-opacity": 0.7,
+              "line-cap": "round",
+              "line-join": "round",
+            },
+          },
+          beforeId
+        );
+      } else {
+        (map.getSource(TRAILS_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(
+          trailsData
+        );
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      applyTrails();
+    } else {
+      map.once("load", applyTrails);
+    }
+  }, [trails]);
 
   // Draw team positions as map layers – frozen teams get ice-blue circle
   useEffect(() => {
@@ -310,7 +381,7 @@ export function RaceMap({
         </div>
       )}
       <p className="absolute bottom-2 left-2 right-2 rounded bg-background/80 px-2 py-1 text-center text-xs text-muted-foreground backdrop-blur">
-        Täpid: viimane teadaolev asukoht (või stardipunkt Pariis/Tallinn, kui asukohta veel jagatud pole).
+        Täpid: viimane asukoht. Jooned: tee, kust meeskonnad on läbi käinud.
         {teamsWithPenalty.length > 0 && " Sinine täpp = karistus aktiivne."}
       </p>
     </div>
