@@ -104,9 +104,45 @@ export function RaceMap({
     };
   }, [initMap]);
 
-  // Subscribe to realtime location updates (Pusher) when configured
+  const fetchTeams = useCallback(async () => {
+    try {
+      const res = await fetch("/api/teams");
+      if (!res.ok) return;
+      const data = await res.json();
+      setTeams((prev) =>
+        prev.map((t) => {
+          const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
+          const defaultPos = DEFAULT_POSITIONS[t.teamId];
+          if (!fromApi) return t;
+          const next = {
+            ...t,
+            activePenalty: fromApi.activePenalty ?? null,
+            queuedPenalties: fromApi.queuedPenalties ?? [],
+          };
+          if (fromApi.lastLat != null && fromApi.lastLng != null) {
+            return {
+              ...next,
+              lat: fromApi.lastLat,
+              lng: fromApi.lastLng,
+              lastUpdatedAt: fromApi.lastUpdatedAt
+                ? new Date(fromApi.lastUpdatedAt)
+                : t.lastUpdatedAt,
+            };
+          }
+          return {
+            ...next,
+            lat: defaultPos?.[0] ?? t.lat,
+            lng: defaultPos?.[1] ?? t.lng,
+          };
+        })
+      );
+    } catch (_) {}
+  }, []);
+
+  // Subscribe to realtime location + penalty updates (Pusher) when configured
   useEffect(() => {
     if (typeof window === "undefined" || !process.env.NEXT_PUBLIC_PUSHER_KEY) return;
+    let cleanup: (() => void) | undefined;
     import("pusher-js").then(({ default: Pusher }) => {
       const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "eu",
@@ -126,56 +162,25 @@ export function RaceMap({
           )
         );
       });
-      return () => {
+      channel.bind("penalty-update", () => fetchTeams());
+      cleanup = () => {
         channel.unbind("location-update");
+        channel.unbind("penalty-update");
         pusher.unsubscribe(channelName);
       };
     });
-  }, [channelName]);
+    return () => cleanup?.();
+  }, [channelName, fetchTeams]);
 
-  // Poll for team locations: once soon, then every 30s (works without Pusher)
+  // Poll: soon, then every 30s. Pusher penalty-update triggers immediate refetch when someone buys.
   useEffect(() => {
-    const fetchTeams = async () => {
-      try {
-        const res = await fetch("/api/teams");
-        if (!res.ok) return;
-        const data = await res.json();
-        setTeams((prev) =>
-          prev.map((t) => {
-            const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
-            const defaultPos = DEFAULT_POSITIONS[t.teamId];
-            if (!fromApi) return t;
-            const next = {
-              ...t,
-              activePenalty: fromApi.activePenalty ?? null,
-              queuedPenalties: fromApi.queuedPenalties ?? [],
-            };
-            if (fromApi.lastLat != null && fromApi.lastLng != null) {
-              return {
-                ...next,
-                lat: fromApi.lastLat,
-                lng: fromApi.lastLng,
-                lastUpdatedAt: fromApi.lastUpdatedAt
-                  ? new Date(fromApi.lastUpdatedAt)
-                  : t.lastUpdatedAt,
-              };
-            }
-            return {
-              ...next,
-              lat: defaultPos?.[0] ?? t.lat,
-              lng: defaultPos?.[1] ?? t.lng,
-            };
-          })
-        );
-      } catch (_) {}
-    };
-    const t0 = setTimeout(fetchTeams, 1500);
+    const t0 = setTimeout(fetchTeams, 500);
     const interval = setInterval(fetchTeams, 30000);
     return () => {
       clearTimeout(t0);
       clearInterval(interval);
     };
-  }, []);
+  }, [fetchTeams]);
 
   // Countdown ticker for penalty timers
   useEffect(() => {
@@ -265,9 +270,8 @@ export function RaceMap({
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
-  const teamsWithPenalty = teams.filter(
-    (t) => t.activePenalty != null || (t.queuedPenalties?.length ?? 0) > 0
-  );
+  // Only show teams with active pause timer – no "next/queued" on map
+  const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
 
   return (
     <div className="relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10">
@@ -282,33 +286,18 @@ export function RaceMap({
           {teamsWithPenalty.map((t) => (
             <div
               key={t.teamId}
-              className="flex flex-col gap-0.5 rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur"
+              className="flex items-center gap-1.5 rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur"
             >
-              <div className="flex items-center gap-1.5">
-                <span className="text-base" aria-hidden>❄️</span>
-                <span className="truncate">{t.name}:</span>
-                {t.activePenalty ? (
-                  <span className="text-primary">
-                    {t.activePenalty.title}
-                    {t.activePenalty.endsAt ? (
-                      <> ({formatRemaining(t.activePenalty.endsAt)})</>
-                    ) : (
-                      " (aktiivne)"
-                    )}
-                  </span>
+              <span className="text-base" aria-hidden>❄️</span>
+              <span className="truncate">{t.name}:</span>
+              <span className="text-primary">
+                {t.activePenalty!.title}
+                {t.activePenalty!.endsAt ? (
+                  <> ({formatRemaining(t.activePenalty!.endsAt)})</>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  " (aktiivne)"
                 )}
-              </div>
-              {(t.queuedPenalties?.length ?? 0) > 0 && (
-                <div className="ml-5 flex flex-wrap gap-x-2 gap-y-0.5 text-muted-foreground">
-                  {t.queuedPenalties!.map((q, i) => (
-                    <span key={i} className="text-[11px]">
-                      Järgmine: {q.title}
-                    </span>
-                  ))}
-                </div>
-              )}
+              </span>
             </div>
           ))}
         </div>

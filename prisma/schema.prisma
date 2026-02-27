@@ -139,6 +139,7 @@ model Penalty {
   enforcedAt        DateTime?
   status            String         // PENDING, ACTIVE, COMPLETED, CANCELLED
   purchaseId        String?        @unique
+  extendedMinutes   Float?         @default(0) // extra minutes added when more pauses bought while active
   createdAt         DateTime       @default(now())
   team              Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
   penaltyOption     PenaltyOption  @relation(fields: [penaltyOptionId], references: [id])

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_PENALTY } from "@/lib/pusher";
 
 export type CurrentPenalty = {
   title: string;
@@ -36,14 +37,15 @@ export async function getTeamPenaltyQueue(teamId: number): Promise<{
     return { current: null, queued: [] };
   }
 
-  const durationMs = (min: number | null) =>
-    min != null ? min * 60 * 1000 : 0;
+  const durationMs = (min: number) => min * 60 * 1000;
 
   // Advance queue: complete expired, start next
   for (let i = 0; i < active.length; i++) {
     const p = active[i];
     const option = p.penaltyOption;
-    const durationMin = option?.durationMinutes ?? 0;
+    const baseMin = option?.durationMinutes ?? 0;
+    const extMin = p.extendedMinutes ?? 0;
+    const durationMin = baseMin + extMin;
     const startsAt = p.startsAt ? new Date(p.startsAt) : null;
     const endsAt =
       startsAt && durationMin > 0
@@ -111,4 +113,69 @@ export async function shouldStartPenaltyImmediately(teamId: number): Promise<boo
     where: { teamId, status: "ACTIVE" },
   });
   return count === 0;
+}
+
+export type CreatePenaltyInput = {
+  teamId: number;
+  penaltyOptionId: string;
+  userId: string;
+  purchaseId: string | null;
+};
+
+/**
+ * Create or add to a TIMEOUT penalty. For TIMEOUT: if team has active TIMEOUT, add duration to it.
+ * For other types: create new penalty (queued).
+ */
+export async function addOrCreatePenalty(input: CreatePenaltyInput): Promise<void> {
+  const option = await prisma.penaltyOption.findUnique({
+    where: { id: input.penaltyOptionId },
+    select: { type: true, durationMinutes: true, title: true },
+  });
+  if (!option) throw new Error("Penalty option not found");
+
+  const isTimeout = option.type === "TIMEOUT";
+  const addMinutes = option.durationMinutes ?? 0;
+
+  if (isTimeout && addMinutes > 0) {
+    const existing = await prisma.penalty.findFirst({
+      where: {
+        teamId: input.teamId,
+        status: "ACTIVE",
+        penaltyOption: { type: "TIMEOUT" },
+      },
+      include: { penaltyOption: { select: { durationMinutes: true } } },
+    });
+    if (existing) {
+      const ext = (existing.extendedMinutes ?? 0) + addMinutes;
+      await prisma.penalty.update({
+        where: { id: existing.id },
+        data: { extendedMinutes: ext },
+      });
+      triggerPenaltyUpdate(input.teamId);
+      return;
+    }
+  }
+
+  const startNow = await shouldStartPenaltyImmediately(input.teamId);
+  await prisma.penalty.create({
+    data: {
+      teamId: input.teamId,
+      penaltyOptionId: input.penaltyOptionId,
+      purchasedByUserId: input.userId,
+      status: "ACTIVE",
+      startsAt: startNow ? new Date() : null,
+      purchaseId: input.purchaseId,
+    },
+  });
+  triggerPenaltyUpdate(input.teamId);
+}
+
+function triggerPenaltyUpdate(teamId: number): void {
+  try {
+    if (process.env.PUSHER_APP_ID && process.env.PUSHER_SECRET) {
+      pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_PENALTY, { teamId });
+    }
+  } catch (e) {
+    console.error("Pusher penalty trigger:", e);
+  }
 }
