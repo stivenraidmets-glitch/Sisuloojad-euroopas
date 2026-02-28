@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TeamPageMap } from "@/components/map/TeamPageMap";
 import { PenaltyShop } from "@/components/shop/PenaltyShop";
+
+const TRAIL_POINTS_LIMIT = 500;
 
 export default async function TeamPage({
   params,
@@ -15,7 +18,7 @@ export default async function TeamPage({
   const teamId = parseInt(id, 10);
   if (teamId !== 1 && teamId !== 2) notFound();
 
-  const [team, allTeams] = await Promise.all([
+  const [team, allTeams, penaltyQueue, trailPoints] = await Promise.all([
     prisma.team.findUnique({
       where: { id: teamId },
       include: {
@@ -29,9 +32,25 @@ export default async function TeamPage({
       },
     }),
     prisma.team.findMany({ orderBy: { id: "asc" }, select: { id: true, name: true } }),
+    getTeamPenaltyQueue(teamId),
+    prisma.teamLocationPoint.findMany({
+      where: { teamId },
+      orderBy: { createdAt: "desc" },
+      take: TRAIL_POINTS_LIMIT,
+      select: { lat: true, lng: true },
+    }),
   ]);
 
   if (!team) notFound();
+
+  const activePenalty =
+    penaltyQueue.current?.type === "TIMEOUT" ? penaltyQueue.current : null;
+  const trailCoords =
+    trailPoints.length >= 2
+      ? trailPoints
+          .reverse()
+          .map((p) => [p.lng, p.lat] as [number, number])
+      : null;
 
   const team1Name = allTeams[0]?.name ?? "Kozip";
   const team2Name = allTeams[1]?.name ?? "Stiven ja Sidni";
@@ -71,6 +90,8 @@ export default async function TeamPage({
               color={team.color}
               lastLat={team.lastLat}
               lastLng={team.lastLng}
+              initialActivePenalty={activePenalty}
+              initialTrail={trailCoords ? { color: team.color, coordinates: trailCoords } : null}
               accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
             />
             <div className="flex flex-wrap items-center gap-4 text-sm">

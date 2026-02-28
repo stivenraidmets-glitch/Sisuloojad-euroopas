@@ -13,7 +13,9 @@ type ChatMessage = {
   createdAt: string;
 };
 
-export function Chatbox() {
+type ChatboxProps = { embedded?: boolean };
+
+export function Chatbox({ embedded }: ChatboxProps = {}) {
   const { data: session, status } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -63,14 +65,25 @@ export function Chatbox() {
     }
   }
 
-  if (status !== "authenticated") return null;
+  if (status !== "authenticated") {
+    if (embedded) {
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          Logi sisse, et vestelda ja näha vestlust.
+        </div>
+      );
+    }
+    return null;
+  }
 
-  return (
-    <aside className="hidden h-[calc(100vh-3.5rem)] w-full flex-col border-l bg-card md:flex md:w-[320px] md:flex-shrink-0 md:sticky md:top-14">
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
-        <MessageCircle className="h-5 w-5 text-muted-foreground" />
-        <h2 className="font-semibold text-sm">Vestlus</h2>
-      </div>
+  const content = (
+    <>
+      {!embedded && (
+        <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
+          <MessageCircle className="h-5 w-5 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">Vestlus</h2>
+        </div>
+      )}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ul ref={messagesEndRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 text-sm">
           {messages.length === 0 && (
@@ -107,6 +120,13 @@ export function Chatbox() {
           </Button>
         </form>
       </div>
+    </>
+  );
+
+  if (embedded) return content;
+  return (
+    <aside className="hidden h-[calc(100vh-3.5rem)] w-full flex-col border-l bg-card md:flex md:w-[320px] md:flex-shrink-0 md:sticky md:top-14">
+      {content}
     </aside>
   );
 }

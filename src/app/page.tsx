@@ -2,10 +2,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
 import { RaceMap } from "@/components/map/RaceMap";
-import { VoteModule } from "@/components/vote/VoteModule";
-import { PenaltyShop } from "@/components/shop/PenaltyShop";
-import { HomeClient } from "./HomeClient";
-import { RecentPenaltiesCard } from "@/components/home/RecentPenaltiesCard";
+import { RightPanel } from "@/components/layout/RightPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -73,49 +70,39 @@ export default async function HomePage() {
   const team1Name = team1?.name ?? "Kozip";
   const team2Name = team2?.name ?? "Stiven ja Sidni";
 
+  const recentPenaltiesForPanel = recentPenalties.map((p) => ({
+    id: p.id,
+    title: p.penaltyOption?.title ?? "—",
+    teamName: p.team?.name ?? "—",
+    buyerName: p.purchasedBy?.name?.trim() || p.purchasedBy?.email || "—",
+    createdAt: p.createdAt.toISOString(),
+  }));
+
   return (
-    <div className="container space-y-8 px-4 py-8">
-      <section>
-        <h1 className="mb-2 text-center text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-          Alustame Nullist <span className="text-primary">·</span> Pariis – Tallinn
-        </h1>
-        <p className="mb-6 text-muted-foreground leading-relaxed">
-          4 sisuloojat alustavad võistlusega Pariisist. Mõlemal tiimil on alguses 0€ ja nende eesmärk on jõuda esimesena tagasi Eestisse. Sina kui vaataja saad siin kodulehel elada enda tiimile reaalajas kaasa või hoopis aeglustada teist tiimi ostes erinevaid karistusi. Ära unusta ka keerutada loosratast, kus sul on võimalik võita üks tasuta karistus. Tervest sellest seiklusest tuleb eraldi YouTube seeria, mida näed juba varsti!
-        </p>
-        <Suspense fallback={<div className="h-[400px] animate-pulse rounded-lg bg-muted" />}>
-          <RaceMap
-            teams={teams}
-            accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
-          />
-        </Suspense>
-      </section>
-
-      <div className="grid gap-8 md:grid-cols-2">
-        <VoteModule team1Name={team1Name} team2Name={team2Name} />
-        <PenaltyShop team1Name={team1Name} team2Name={team2Name} />
-      </div>
-
-      <HomeClient
+    <>
+      <main className="min-h-[calc(100vh-3.5rem)] min-w-0 flex-1 px-4 py-4 md:px-6 md:py-6">
+        <section className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+              Alustame Nullist <span className="text-primary">·</span> Pariis – Tallinn
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              4 sisuloojat Pariisist. Jälgi kaardil, hääleta, osta karistusi, keeruta ratast.
+            </p>
+          </div>
+          <Suspense fallback={<div className="h-[400px] animate-pulse rounded-lg bg-muted" />}>
+            <RaceMap
+              teams={teams}
+              accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
+            />
+          </Suspense>
+        </section>
+      </main>
+      <RightPanel
         team1Name={team1Name}
         team2Name={team2Name}
-        recentPenalties={recentPenalties.map((p) => ({
-          id: p.id,
-          teamName: p.team?.name ?? "—",
-          title: p.penaltyOption?.title ?? "—",
-          status: p.status,
-          createdAt: p.createdAt.toISOString(),
-        }))}
+        recentPenalties={recentPenaltiesForPanel}
       />
-
-      <RecentPenaltiesCard
-        penalties={recentPenalties.map((p) => ({
-          id: p.id,
-          title: p.penaltyOption?.title ?? "—",
-          teamName: p.team?.name ?? "—",
-          buyerName: p.purchasedBy?.name?.trim() || p.purchasedBy?.email || "—",
-          createdAt: p.createdAt.toISOString(),
-        }))}
-      />
-    </div>
+    </>
   );
 }
