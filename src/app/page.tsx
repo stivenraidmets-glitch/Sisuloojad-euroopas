@@ -80,20 +80,13 @@ export default async function HomePage() {
 
   return (
     <>
-      <main className="min-h-[calc(100vh-3.5rem)] min-w-0 flex-1 px-4 py-4 md:px-6 md:py-6">
-        <section className="flex flex-col gap-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
-              Alustame Nullist <span className="text-primary">·</span> Pariis – Tallinn
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              4 sisuloojat Pariisist. Jälgi kaardil, hääleta, osta karistusi, keeruta ratast.
-            </p>
-          </div>
-          <Suspense fallback={<div className="h-[400px] animate-pulse rounded-lg bg-muted" />}>
+      <main className="flex min-h-0 flex-1 flex-col px-2 py-2 md:px-4 md:py-4">
+        <section className="flex min-h-0 flex-1 flex-col">
+          <Suspense fallback={<div className="min-h-[400px] flex-1 animate-pulse rounded-lg bg-muted" />}>
             <RaceMap
               teams={teams}
               accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
+              fullHeight
             />
           </Suspense>
         </section>

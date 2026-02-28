@@ -68,8 +68,9 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
   if (status !== "authenticated") {
     if (embedded) {
       return (
-        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          Logi sisse, et vestelda ja näha vestlust.
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          <p>Logi sisse, et vestelda ja näha vestlust.</p>
+          <a href="/login" className="text-primary underline hover:no-underline">Logi sisse</a>
         </div>
       );
     }

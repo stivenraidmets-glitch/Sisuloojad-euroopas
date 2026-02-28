@@ -99,8 +99,9 @@ export function SettingsView() {
 
   if (status !== "authenticated") {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-        Logi sisse, et muuta konto seadeid.
+      <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+        <p>Logi sisse, et muuta konto seadeid.</p>
+        <a href="/login" className="text-primary underline hover:no-underline">Logi sisse</a>
       </div>
     );
   }

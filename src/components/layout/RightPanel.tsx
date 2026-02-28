@@ -38,7 +38,7 @@ export function RightPanel({ team1Name, team2Name, recentPenalties }: RightPanel
   const [activeTab, setActiveTab] = useState<TabId>("chat");
 
   return (
-    <aside className="flex h-[min(calc(100vh-3.5rem),600px)] w-full flex-col border-l border-white/5 bg-card md:h-[calc(100vh-3.5rem)] md:w-[360px] md:flex-shrink-0 md:sticky md:top-14">
+    <aside className="flex h-full min-h-0 w-full flex-col border-l border-white/5 bg-card md:w-[360px] md:flex-shrink-0">
       <div className="flex shrink-0 gap-0.5 border-b border-white/5 p-1.5">
         {TABS.map(({ id, label, icon: Icon }) => (
           <Button

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { Header } from "@/components/layout/Header";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -22,8 +21,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <AnimatedBackground />
-          <Header />
-          <div className="flex min-h-[calc(100vh-3.5rem)] flex-col md:flex-row">{children}</div>
+          <div className="flex h-screen flex-col md:flex-row">{children}</div>
         </Providers>
       </body>
     </html>

@@ -55,6 +55,8 @@ type RaceMapProps = {
   }[];
   channelName?: string;
   accessToken: string;
+  /** When true, map fills available height (for full-viewport layout). */
+  fullHeight?: boolean;
 };
 
 const FROZEN_COLOR = "#93c5fd"; // ice blue for active penalty
@@ -63,6 +65,7 @@ export function RaceMap({
   teams: initialTeams,
   channelName = "race",
   accessToken,
+  fullHeight,
 }: RaceMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<mapboxgl.Map | null>(null);
@@ -332,7 +335,7 @@ export function RaceMap({
 
   if (!accessToken) {
     return (
-      <div className="flex h-[400px] items-center justify-center rounded-lg border bg-muted/30 text-muted-foreground">
+      <div className={`flex items-center justify-center rounded-lg border bg-muted/30 text-muted-foreground ${fullHeight ? "min-h-0 flex-1" : "h-[400px]"}`}>
         Lisa NEXT_PUBLIC_MAPBOX_TOKEN, et kaart kuvada.
       </div>
     );
@@ -350,8 +353,8 @@ export function RaceMap({
   const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10">
-      <div ref={mapRef} className="h-[400px] w-full" />
+    <div className={`relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10 ${fullHeight ? "flex min-h-0 flex-1 flex-col" : ""}`}>
+      <div ref={mapRef} className={`w-full ${fullHeight ? "min-h-0 flex-1" : "h-[400px]"}`} />
       {!hasValidPositions && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
           <p className="text-muted-foreground">Ootame meeskondade asukohte…</p>
