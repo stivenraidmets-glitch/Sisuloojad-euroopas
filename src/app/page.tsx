@@ -13,6 +13,7 @@ async function getTeams() {
       id: true,
       name: true,
       color: true,
+      imageUrl: true,
       lastLat: true,
       lastLng: true,
       lastUpdatedAt: true,

@@ -12,6 +12,7 @@ export async function GET() {
         id: true,
         name: true,
         color: true,
+        imageUrl: true,
         lastLat: true,
         lastLng: true,
         lastUpdatedAt: true,

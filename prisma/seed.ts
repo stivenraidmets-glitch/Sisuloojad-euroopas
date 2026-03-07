@@ -5,8 +5,8 @@ const prisma = new PrismaClient();
 async function main() {
   await prisma.team.upsert({
     where: { id: 1 },
-    update: { name: "Kozip", color: "#3B82F6" },
-    create: { id: 1, name: "Kozip", color: "#3B82F6" },
+    update: { name: "Kozip", color: "#3B82F6", imageUrl: "/team1.png" },
+    create: { id: 1, name: "Kozip", color: "#3B82F6", imageUrl: "/team1.png" },
   });
   await prisma.team.upsert({
     where: { id: 2 },

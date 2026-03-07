@@ -81,6 +81,7 @@ model Team {
   id                Int                   @id
   name              String
   color             String                // hex e.g. #3B82F6
+  imageUrl          String?               // optional profile/logo image for map marker (e.g. /team1.png)
   lastLat           Float?
   lastLng           Float?
   lastUpdatedAt     DateTime?
