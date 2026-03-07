@@ -17,6 +17,7 @@ async function getTeams() {
       lastLat: true,
       lastLng: true,
       lastUpdatedAt: true,
+      totalDistanceKm: true,
     },
   });
   const withPenalties = await Promise.all(

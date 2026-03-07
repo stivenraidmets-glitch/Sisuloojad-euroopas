@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCircle, Vote, ShoppingBag, Settings } from "lucide-react";
 import { Chatbox } from "@/components/chat/Chatbox";
 import { VoteModule } from "@/components/vote/VoteModule";
@@ -10,6 +10,7 @@ import { SettingsView } from "@/components/settings/SettingsView";
 import { HomeClient } from "@/app/HomeClient";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { OPEN_PANEL_TAB } from "@/components/map/RaceMap";
 
 export type TabId = "chat" | "vote" | "punishments" | "settings";
 
@@ -36,6 +37,14 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: 
 
 export function RightPanel({ team1Name, team2Name, recentPenalties }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("chat");
+
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ tab: TabId }>) => {
+      if (e.detail?.tab) setActiveTab(e.detail.tab);
+    };
+    window.addEventListener(OPEN_PANEL_TAB, handler as EventListener);
+    return () => window.removeEventListener(OPEN_PANEL_TAB, handler as EventListener);
+  }, []);
 
   return (
     <aside className="flex h-full min-h-0 w-full flex-col border-l border-white/5 bg-card md:w-[360px] md:flex-shrink-0">

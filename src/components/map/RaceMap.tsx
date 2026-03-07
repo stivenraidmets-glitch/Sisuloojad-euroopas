@@ -1,10 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { useSession } from "next-auth/react";
 import type { TeamLocation } from "@/types";
 import { haversineDistanceKm } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { TeamMarkerPopup } from "./TeamMarkerPopup";
 
 const MAP_CENTER: [number, number] = [15.5, 52]; // fallback Europe
 const MAP_ZOOM = 4;
@@ -21,6 +25,7 @@ const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
 const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson";
 const COUNTRY_FILL_OPACITY = 0.35;
+export const OPEN_PANEL_TAB = "open-panel-tab" as const;
 
 // Default positions when no location has been broadcast yet (Paris → Tallinn race)
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
@@ -48,6 +53,7 @@ type TeamState = {
   lat: number;
   lng: number;
   lastUpdatedAt: Date | null;
+  totalDistanceKm: number;
   activePenalty: ActivePenalty | null;
   queuedPenalties: QueuedPenalty[];
 };
@@ -61,6 +67,7 @@ type RaceMapProps = {
     lastLat: number | null;
     lastLng: number | null;
     lastUpdatedAt: Date | null;
+    totalDistanceKm?: number;
     activePenalty?: ActivePenalty | null;
     queuedPenalties?: QueuedPenalty[];
   }[];
@@ -89,6 +96,39 @@ export function RaceMap({
   const mapInstance = useRef<mapboxgl.Map | null>(null);
   const hasFittedBounds = useRef(false);
   const teamMarkersRef = useRef<Map<number, mapboxgl.Marker>>(new Map());
+  const teamPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const teamPopupRootRef = useRef<Root | null>(null);
+  const teamsRef = useRef<TeamState[]>([]);
+  const voteHandlerRef = useRef<((teamId: number) => Promise<void>) | null>(null);
+  const { status } = useSession();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    voteHandlerRef.current = async (teamId: number) => {
+      if (status !== "authenticated") {
+        toast({ title: "Palun logi sisse, et hääletada", variant: "destructive" });
+        return;
+      }
+      try {
+        const res = await fetch("/api/vote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teamId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to vote");
+        toast({ title: "Hääl salvestatud!" });
+      } catch (e) {
+        toast({
+          title: e instanceof Error ? e.message : "Hääletamine ebaõnnestus",
+          variant: "destructive",
+        });
+      }
+    };
+    return () => {
+      voteHandlerRef.current = null;
+    };
+  }, [status, toast]);
 
   const [teams, setTeams] = useState<TeamState[]>(
     initialTeams.map((t) => {
@@ -102,6 +142,7 @@ export function RaceMap({
         lat: hasBroadcast ? t.lastLat! : (defaultPos?.[0] ?? 0),
         lng: hasBroadcast ? t.lastLng! : (defaultPos?.[1] ?? 0),
         lastUpdatedAt: t.lastUpdatedAt,
+        totalDistanceKm: t.totalDistanceKm ?? 0,
         activePenalty: t.activePenalty ?? null,
         queuedPenalties: t.queuedPenalties ?? [],
       };
@@ -165,6 +206,7 @@ export function RaceMap({
           const next = {
             ...t,
             imageUrl: apiImage || getDefaultTeamImageUrl(t.teamId) || t.imageUrl || null,
+            totalDistanceKm: typeof fromApi.totalDistanceKm === "number" ? fromApi.totalDistanceKm : t.totalDistanceKm,
             activePenalty: fromApi.activePenalty ?? null,
             queuedPenalties: fromApi.queuedPenalties ?? [],
           };
@@ -442,6 +484,8 @@ export function RaceMap({
     const map = mapInstance.current;
     if (!map) return;
 
+    teamsRef.current = teams;
+
     const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
     teams.forEach((t) => {
       const lat = t.lat;
@@ -503,6 +547,7 @@ export function RaceMap({
         el.style.background = "transparent";
         el.style.border = "2px solid #fff";
         el.style.boxSizing = "border-box";
+        el.style.cursor = "pointer";
         const img = document.createElement("img");
         img.src = url;
         img.alt = t.name;
@@ -511,6 +556,56 @@ export function RaceMap({
         img.style.objectFit = "cover";
         img.style.display = "block";
         el.appendChild(img);
+        const teamId = t.teamId;
+        el.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          const team = teamsRef.current.find((x) => x.teamId === teamId);
+          if (!team) return;
+          if (teamPopupRef.current) {
+            teamPopupRef.current.remove();
+            teamPopupRef.current = null;
+          }
+          if (teamPopupRootRef.current) {
+            teamPopupRootRef.current.unmount();
+            teamPopupRootRef.current = null;
+          }
+          const container = document.createElement("div");
+          const root = createRoot(container);
+          teamPopupRootRef.current = root;
+          const formatRemainingFn = (endsAt: string) => {
+            const end = new Date(endsAt).getTime();
+            const secs = Math.max(0, Math.floor((end - Date.now()) / 1000));
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return `${m}:${s.toString().padStart(2, "0")}`;
+          };
+          root.render(
+            <TeamMarkerPopup
+              teamName={team.name}
+              totalDistanceKm={team.totalDistanceKm}
+              activePenalty={team.activePenalty}
+              formatRemaining={formatRemainingFn}
+              onVote={async () => voteHandlerRef.current?.(teamId)}
+              onBuyPunishment={() => {
+                window.dispatchEvent(
+                  new CustomEvent(OPEN_PANEL_TAB, { detail: { tab: "punishments" as const } })
+                );
+                teamPopupRef.current?.remove();
+                teamPopupRef.current = null;
+              }}
+            />
+          );
+          const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: false })
+            .setLngLat([lng, lat])
+            .setDOMContent(container)
+            .addTo(map);
+          teamPopupRef.current = popup;
+          popup.on("close", () => {
+            root.unmount();
+            teamPopupRootRef.current = null;
+            teamPopupRef.current = null;
+          });
+        });
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([lng, lat])
           .addTo(map);
@@ -558,11 +653,15 @@ export function RaceMap({
     }
   }, [teams]);
 
-  // Clean up markers only on unmount (not when teams update, so markers don't flicker)
+  // Clean up markers and popup only on unmount
   useEffect(() => {
     return () => {
       teamMarkersRef.current.forEach((m) => m.remove());
       teamMarkersRef.current.clear();
+      teamPopupRef.current?.remove();
+      teamPopupRef.current = null;
+      teamPopupRootRef.current?.unmount();
+      teamPopupRootRef.current = null;
     };
   }, []);
 
