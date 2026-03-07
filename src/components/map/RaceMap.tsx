@@ -4,10 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { TeamLocation } from "@/types";
+import { haversineDistanceKm } from "@/lib/utils";
 
-const MAP_CENTER: [number, number] = [15.5, 52]; // Europe
+const MAP_CENTER: [number, number] = [15.5, 52]; // fallback Europe
 const MAP_ZOOM = 4;
 const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
+const FIT_PADDING = 100; // px around team positions so other countries stay visible
+const FIT_MAX_ZOOM = 6;  // don't zoom in past this (higher = more zoom)
+const SINGLE_POINT_ZOOM = 5; // zoom when only one team has location
 const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
 const TRAILS_SOURCE_ID = "teams-trails";
@@ -69,6 +73,7 @@ export function RaceMap({
 }: RaceMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<mapboxgl.Map | null>(null);
+  const hasFittedBounds = useRef(false);
 
   const [teams, setTeams] = useState<TeamState[]>(
     initialTeams.map((t) => {
@@ -269,6 +274,39 @@ export function RaceMap({
     }
   }, [trails]);
 
+  // Fit map to team positions once (so view is centered on live locations, zoomed in enough to see them)
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || hasFittedBounds.current) return;
+
+    const valid = teams.filter(
+      (t) =>
+        typeof t.lat === "number" &&
+        typeof t.lng === "number" &&
+        t.lat >= -90 &&
+        t.lat <= 90 &&
+        t.lng >= -180 &&
+        t.lng <= 180 &&
+        !(t.lat === 0 && t.lng === 0)
+    );
+    if (valid.length === 0) return;
+
+    const doFit = () => {
+      if (valid.length === 1) {
+        map.setCenter([valid[0].lng, valid[0].lat]);
+        map.setZoom(SINGLE_POINT_ZOOM);
+      } else {
+        const bounds = new mapboxgl.LngLatBounds();
+        valid.forEach((t) => bounds.extend([t.lng, t.lat]));
+        map.fitBounds(bounds, { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration: 0 });
+      }
+      hasFittedBounds.current = true;
+    };
+
+    if (map.isStyleLoaded()) doFit();
+    else map.once("load", doFit);
+  }, [teams]);
+
   // Draw team positions as map layers – frozen teams get ice-blue circle
   useEffect(() => {
     const map = mapInstance.current;
@@ -352,6 +390,18 @@ export function RaceMap({
   // Only show teams with active pause timer – no "next/queued" on map
   const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
 
+  // Distance between the two teams (when both have valid positions)
+  const team1 = teams[0];
+  const team2 = teams[1];
+  const valid1 = team1 && typeof team1.lat === "number" && typeof team1.lng === "number" && !(team1.lat === 0 && team1.lng === 0);
+  const valid2 = team2 && typeof team2.lat === "number" && typeof team2.lng === "number" && !(team2.lat === 0 && team2.lng === 0);
+  const distanceKm = valid1 && valid2 ? haversineDistanceKm(team1.lat, team1.lng, team2.lat, team2.lng) : null;
+  const distanceText = distanceKm != null
+    ? distanceKm < 1
+      ? `${Math.round(distanceKm * 1000)} m`
+      : `${distanceKm.toFixed(1)} km`
+    : null;
+
   return (
     <div className={`relative w-full overflow-hidden rounded-lg border border-white/5 bg-muted/30 backdrop-blur-sm dark:border-white/10 ${fullHeight ? "flex min-h-0 flex-1 flex-col" : ""}`}>
       <div ref={mapRef} className={`w-full ${fullHeight ? "min-h-0 flex-1" : "h-[400px]"}`} />
@@ -360,27 +410,31 @@ export function RaceMap({
           <p className="text-muted-foreground">Ootame meeskondade asukohte…</p>
         </div>
       )}
-      {teamsWithPenalty.length > 0 && (
-        <div className="absolute left-2 top-2 flex w-fit max-w-[85%] flex-col gap-2">
-          {teamsWithPenalty.map((t) => (
-            <div
-              key={t.teamId}
-              className="flex items-center gap-1.5 rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur"
-            >
-              <span className="text-base" aria-hidden>❄️</span>
-              <span className="truncate">{t.name}:</span>
-              <span className="text-primary">
-                {t.activePenalty!.title}
-                {t.activePenalty!.endsAt ? (
-                  <> ({formatRemaining(t.activePenalty!.endsAt)})</>
-                ) : (
-                  " (aktiivne)"
-                )}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="absolute left-2 top-2 flex w-fit max-w-[85%] flex-col gap-2">
+        {distanceText != null && (
+          <div className="rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur">
+            <span className="text-muted-foreground">Tiimide vahe: </span>
+            <span className="text-primary font-semibold">{distanceText}</span>
+          </div>
+        )}
+        {teamsWithPenalty.length > 0 && teamsWithPenalty.map((t) => (
+          <div
+            key={t.teamId}
+            className="flex items-center gap-1.5 rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur"
+          >
+            <span className="text-base" aria-hidden>❄️</span>
+            <span className="truncate">{t.name}:</span>
+            <span className="text-primary">
+              {t.activePenalty!.title}
+              {t.activePenalty!.endsAt ? (
+                <> ({formatRemaining(t.activePenalty!.endsAt)})</>
+              ) : (
+                " (aktiivne)"
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
       <p className="absolute bottom-2 left-2 right-2 rounded bg-background/80 px-2 py-1 text-center text-xs text-muted-foreground backdrop-blur">
         Täpid: viimane asukoht. Jooned: tee, kust meeskonnad on läbi käinud.
         {teamsWithPenalty.length > 0 && " Sinine täpp = karistus aktiivne."}
