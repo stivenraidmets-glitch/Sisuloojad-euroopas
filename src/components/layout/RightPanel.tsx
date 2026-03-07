@@ -39,21 +39,20 @@ export function RightPanel({ team1Name, team2Name, recentPenalties }: RightPanel
 
   return (
     <aside className="flex h-full min-h-0 w-full flex-col border-l border-white/5 bg-card md:w-[360px] md:flex-shrink-0">
-      <div className="flex min-w-0 shrink-0 gap-0.5 border-b border-white/5 p-1.5">
+      <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-white/5 p-2">
         {TABS.map(({ id, label, icon: Icon }) => (
           <Button
             key={id}
             variant={activeTab === id ? "secondary" : "ghost"}
             size="sm"
             className={cn(
-              "min-w-0 flex-1 gap-1 text-xs",
+              "shrink-0 gap-1.5 whitespace-nowrap text-xs",
               activeTab === id && "bg-primary/15 text-primary"
             )}
             onClick={() => setActiveTab(id)}
-            title={label}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{label}</span>
+            <span>{label}</span>
           </Button>
         ))}
       </div>
