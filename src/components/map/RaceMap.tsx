@@ -510,6 +510,7 @@ export function RaceMap({
           id: TEAMS_LAYER_ID,
           type: "circle",
           source: TEAMS_SOURCE_ID,
+          filter: ["!", ["has", "icon"]], // only draw circle for teams without profile image
           paint: {
             "circle-radius": 14,
             "circle-color": ["get", "color"],
