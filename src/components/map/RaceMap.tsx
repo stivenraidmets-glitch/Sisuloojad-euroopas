@@ -18,7 +18,7 @@ const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
-const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geojson";
+const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson";
 const COUNTRY_FILL_OPACITY = 0.4;
 
 // Default positions when no location has been broadcast yet (Paris → Tallinn race)
@@ -336,7 +336,7 @@ export function RaceMap({
 
       const matchExpr: unknown[] = [
         "match",
-        ["upcase", ["get", "id"]],
+        ["upcase", ["get", "iso_a2"]],
       ];
       Object.entries(countryColors).forEach(([code, color]) => {
         matchExpr.push(code, color);
