@@ -15,7 +15,7 @@ const SINGLE_POINT_ZOOM = 5; // zoom when only one team has location
 const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
 const TEAMS_ICONS_LAYER_ID = "teams-icons";
-const TEAM_ICON_SIZE = 1.1; // symbol size (image fits inside circle)
+const TEAM_ICON_SIZE = 1.4; // symbol size so profile image is clearly visible on map
 const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
@@ -73,6 +73,13 @@ type RaceMapProps = {
 
 const FROZEN_COLOR = "#93c5fd"; // ice blue for active penalty
 
+/** Fallback image paths when DB has no imageUrl (e.g. before migration). */
+function getDefaultTeamImageUrl(teamId: number): string | null {
+  if (teamId === 1) return "/team1.png";
+  if (teamId === 2) return "/team2.png";
+  return null;
+}
+
 export function RaceMap({
   teams: initialTeams,
   channelName = "race",
@@ -91,7 +98,7 @@ export function RaceMap({
         teamId: t.id,
         name: t.name,
         color: t.color,
-        imageUrl: t.imageUrl ?? null,
+        imageUrl: t.imageUrl ?? getDefaultTeamImageUrl(t.id),
         lat: hasBroadcast ? t.lastLat! : (defaultPos?.[0] ?? 0),
         lng: hasBroadcast ? t.lastLng! : (defaultPos?.[1] ?? 0),
         lastUpdatedAt: t.lastUpdatedAt,
@@ -156,7 +163,7 @@ export function RaceMap({
           if (!fromApi) return t;
           const next = {
             ...t,
-            imageUrl: fromApi.imageUrl ?? t.imageUrl,
+            imageUrl: fromApi.imageUrl ?? getDefaultTeamImageUrl(t.teamId) ?? t.imageUrl,
             activePenalty: fromApi.activePenalty ?? null,
             queuedPenalties: fromApi.queuedPenalties ?? [],
           };
