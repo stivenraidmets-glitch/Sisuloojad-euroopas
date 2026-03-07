@@ -22,6 +22,29 @@ export async function getOrCreateSystemUser(): Promise<string> {
   return user.id;
 }
 
+/** Estonian (and common) country names for chat notifications. Fallback: use code. */
+const COUNTRY_NAMES_ET: Record<string, string> = {
+  EE: "Eestisse",
+  LV: "Lätisse",
+  LT: "Leetisse",
+  PL: "Poolasse",
+  DE: "Saksamaale",
+  FR: "Prantsusmaale",
+  NL: "Hollandisse",
+  BE: "Belgiasse",
+  BY: "Valgevenesse",
+  RU: "Venemaale",
+  FI: "Soome",
+  SE: "Rootsisse",
+  DK: "Taani",
+  NO: "Norrasse",
+};
+
+function getCountryNameForChat(countryCode: string): string {
+  const name = COUNTRY_NAMES_ET[countryCode.toUpperCase()];
+  return name ?? countryCode;
+}
+
 export async function notifyPenaltyToChat(
   teamName: string,
   penaltyTitle: string,
@@ -38,5 +61,22 @@ export async function notifyPenaltyToChat(
     });
   } catch (e) {
     console.error("Chat notify error:", e);
+  }
+}
+
+export async function notifyCountryUnlockToChat(
+  teamName: string,
+  countryCode: string
+): Promise<void> {
+  try {
+    const systemUserId = await getOrCreateSystemUser();
+    const countryName = getCountryNameForChat(countryCode);
+    const body = `🏁 Meeskond ${teamName} jõudis esimesena ${countryName}!`;
+    const truncated = body.slice(0, MAX_BODY);
+    await prisma.chatMessage.create({
+      data: { userId: systemUserId, body: truncated },
+    });
+  } catch (e) {
+    console.error("Chat notify country unlock:", e);
   }
 }
