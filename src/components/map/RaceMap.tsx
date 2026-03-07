@@ -467,6 +467,39 @@ export function RaceMap({
       });
     });
 
+    const withImages = teams.filter((t) => (t.imageUrl ?? "").trim());
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+
+    const loadTeamImagesAndAddSymbolLayer = () => {
+      if (withImages.length === 0) return;
+      let pending = withImages.length;
+      withImages.forEach((t) => {
+        const raw = (t.imageUrl ?? "").trim();
+        const url = raw.startsWith("http") ? raw : `${origin}${raw.startsWith("/") ? "" : "/"}${raw}`;
+        map.loadImage(url, (err, img) => {
+          if (!err && img && !map.hasImage(`team-${t.teamId}`)) {
+            map.addImage(`team-${t.teamId}`, img);
+          }
+          pending -= 1;
+          if (pending === 0) {
+            if (!map.getLayer(TEAMS_ICONS_LAYER_ID)) {
+              map.addLayer({
+                id: TEAMS_ICONS_LAYER_ID,
+                type: "symbol",
+                source: TEAMS_SOURCE_ID,
+                filter: ["has", "icon"],
+                layout: {
+                  "icon-image": ["get", "icon"],
+                  "icon-size": TEAM_ICON_SIZE,
+                  "icon-allow-overlap": true,
+                },
+              });
+            }
+          }
+        });
+      });
+    };
+
     const applyData = () => {
       if (!map.getSource(TEAMS_SOURCE_ID)) {
         map.addSource(TEAMS_SOURCE_ID, {
@@ -484,11 +517,13 @@ export function RaceMap({
             "circle-stroke-color": "#fff",
           },
         });
+        loadTeamImagesAndAddSymbolLayer();
       } else {
         (map.getSource(TEAMS_SOURCE_ID) as mapboxgl.GeoJSONSource).setData({
           type: "FeatureCollection",
           features,
         });
+        loadTeamImagesAndAddSymbolLayer();
       }
     };
 
@@ -497,47 +532,6 @@ export function RaceMap({
     } else {
       map.once("load", applyData);
     }
-  }, [teams]);
-
-  // Load team profile images and add symbol layer on top of circles
-  useEffect(() => {
-    const map = mapInstance.current;
-    if (!map || !map.getSource(TEAMS_SOURCE_ID)) return;
-
-    const withImages = teams.filter((t) => t.imageUrl?.trim());
-    if (withImages.length === 0) return;
-
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-
-    const loadAll = () => {
-      let pending = withImages.length;
-      withImages.forEach((t) => {
-        const raw = (t.imageUrl ?? "").trim();
-        const url = raw.startsWith("http") ? raw : `${origin}${raw.startsWith("/") ? "" : "/"}${raw}`;
-        map.loadImage(url, (err, img) => {
-          if (!err && img && !map.hasImage(`team-${t.teamId}`)) {
-            map.addImage(`team-${t.teamId}`, img);
-          }
-          pending -= 1;
-          if (pending === 0 && !map.getLayer(TEAMS_ICONS_LAYER_ID)) {
-            map.addLayer({
-              id: TEAMS_ICONS_LAYER_ID,
-              type: "symbol",
-              source: TEAMS_SOURCE_ID,
-              filter: ["has", "icon"],
-              layout: {
-                "icon-image": ["get", "icon"],
-                "icon-size": TEAM_ICON_SIZE,
-                "icon-allow-overlap": true,
-              },
-            });
-          }
-        });
-      });
-    };
-
-    if (map.isStyleLoaded()) loadAll();
-    else map.once("load", loadAll);
   }, [teams]);
 
   const hasValidPositions = teams.some((t) => t.lat !== 0 || t.lng !== 0);
