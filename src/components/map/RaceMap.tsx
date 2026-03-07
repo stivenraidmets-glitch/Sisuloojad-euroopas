@@ -18,8 +18,8 @@ const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
-const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson";
-const COUNTRY_FILL_OPACITY = 0.4;
+const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson";
+const COUNTRY_FILL_OPACITY = 0.35;
 
 // Default positions when no location has been broadcast yet (Paris → Tallinn race)
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
@@ -334,15 +334,17 @@ export function RaceMap({
         );
       }
 
+      // Support both iso_a2 and ISO_A2 (Natural Earth 50m uses ISO_A2)
       const matchExpr: unknown[] = [
         "match",
-        ["upcase", ["get", "iso_a2"]],
+        ["upcase", ["coalesce", ["get", "iso_a2"], ["get", "ISO_A2"]]],
       ];
       Object.entries(countryColors).forEach(([code, color]) => {
         matchExpr.push(code, color);
       });
       matchExpr.push("rgba(0,0,0,0)");
 
+      const hasUnlocks = Object.keys(countryColors).length > 0;
       if (map.getLayer(COUNTRIES_LAYER_ID)) {
         map.setPaintProperty(
           COUNTRIES_LAYER_ID,
@@ -352,7 +354,12 @@ export function RaceMap({
         map.setPaintProperty(
           COUNTRIES_LAYER_ID,
           "fill-opacity",
-          Object.keys(countryColors).length > 0 ? COUNTRY_FILL_OPACITY : 0
+          hasUnlocks ? COUNTRY_FILL_OPACITY : 0
+        );
+        map.setPaintProperty(
+          COUNTRIES_LAYER_ID,
+          "fill-outline-color",
+          matchExpr as mapboxgl.Expression
         );
       } else {
         const beforeId = map.getLayer(TRAILS_LAYER_ID)
@@ -367,7 +374,8 @@ export function RaceMap({
             source: COUNTRIES_SOURCE_ID,
             paint: {
               "fill-color": matchExpr as mapboxgl.Expression,
-              "fill-opacity": Object.keys(countryColors).length > 0 ? COUNTRY_FILL_OPACITY : 0,
+              "fill-opacity": hasUnlocks ? COUNTRY_FILL_OPACITY : 0,
+              "fill-outline-color": matchExpr as mapboxgl.Expression,
             },
           },
           beforeId
