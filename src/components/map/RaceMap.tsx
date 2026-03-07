@@ -161,9 +161,10 @@ export function RaceMap({
           const fromApi = data.find((d: { id: number }) => d.id === t.teamId);
           const defaultPos = DEFAULT_POSITIONS[t.teamId];
           if (!fromApi) return t;
+          const apiImage = fromApi.imageUrl != null ? String(fromApi.imageUrl).trim() : "";
           const next = {
             ...t,
-            imageUrl: fromApi.imageUrl ?? getDefaultTeamImageUrl(t.teamId) ?? t.imageUrl,
+            imageUrl: apiImage || getDefaultTeamImageUrl(t.teamId) || t.imageUrl || null,
             activePenalty: fromApi.activePenalty ?? null,
             queuedPenalties: fromApi.queuedPenalties ?? [],
           };
@@ -471,10 +472,9 @@ export function RaceMap({
     const origin = typeof window !== "undefined" ? window.location.origin : "";
 
     const updateImageMarkers = () => {
-      teamMarkersRef.current.forEach((m) => m.remove());
-      teamMarkersRef.current.clear();
+      const toShow = new Set<number>();
       teams.forEach((t) => {
-        const raw = (t.imageUrl ?? "").trim();
+        const raw = (t.imageUrl ?? getDefaultTeamImageUrl(t.teamId) ?? "").trim();
         if (!raw) return;
         const lat = t.lat;
         const lng = t.lng;
@@ -488,6 +488,12 @@ export function RaceMap({
           (lat === 0 && lng === 0)
         )
           return;
+        toShow.add(t.teamId);
+        const existing = teamMarkersRef.current.get(t.teamId);
+        if (existing) {
+          existing.setLngLat([lng, lat]);
+          return;
+        }
         const url = raw.startsWith("http") ? raw : `${origin}${raw.startsWith("/") ? "" : "/"}${raw}`;
         const el = document.createElement("div");
         el.style.width = `${TEAM_MARKER_SIZE_PX}px`;
@@ -509,6 +515,12 @@ export function RaceMap({
           .setLngLat([lng, lat])
           .addTo(map);
         teamMarkersRef.current.set(t.teamId, marker);
+      });
+      teamMarkersRef.current.forEach((marker, teamId) => {
+        if (!toShow.has(teamId)) {
+          marker.remove();
+          teamMarkersRef.current.delete(teamId);
+        }
       });
     };
 
@@ -544,11 +556,15 @@ export function RaceMap({
     } else {
       map.once("load", applyData);
     }
+  }, [teams]);
+
+  // Clean up markers only on unmount (not when teams update, so markers don't flicker)
+  useEffect(() => {
     return () => {
       teamMarkersRef.current.forEach((m) => m.remove());
       teamMarkersRef.current.clear();
     };
-  }, [teams]);
+  }, []);
 
   const hasValidPositions = teams.some((t) => t.lat !== 0 || t.lng !== 0);
 
