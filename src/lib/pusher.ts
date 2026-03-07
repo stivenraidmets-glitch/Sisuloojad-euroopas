@@ -12,3 +12,4 @@ export const PUSHER_CHANNEL = "race";
 export const PUSHER_EVENT_LOCATION = "location-update";
 export const PUSHER_EVENT_VOTES = "votes-update";
 export const PUSHER_EVENT_PENALTY = "penalty-update";
+export const PUSHER_EVENT_COUNTRY_UNLOCK = "country-unlock";

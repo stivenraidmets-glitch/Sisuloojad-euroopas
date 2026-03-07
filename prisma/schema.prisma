@@ -89,6 +89,17 @@ model Team {
   penalties         Penalty[]
   purchases         Purchase[]
   locationTrail     TeamLocationPoint[]
+  countryUnlocks   CountryUnlock[]
+}
+
+model CountryUnlock {
+  id         String   @id @default(cuid())
+  countryCode String  @unique // ISO 3166-1 alpha-2 e.g. DE, PL
+  teamId     Int
+  unlockedAt DateTime @default(now())
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
 }
 
 model TeamLocationPoint {

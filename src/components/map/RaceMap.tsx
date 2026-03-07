@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { TeamLocation } from "@/types";
@@ -16,6 +16,10 @@ const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
 const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
+const COUNTRIES_SOURCE_ID = "country-unlocks";
+const COUNTRIES_LAYER_ID = "country-unlocks-fill";
+const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geojson";
+const COUNTRY_FILL_OPACITY = 0.4;
 
 // Default positions when no location has been broadcast yet (Paris → Tallinn race)
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
@@ -93,6 +97,8 @@ export function RaceMap({
   );
   const [now, setNow] = useState(() => new Date());
   const [trails, setTrails] = useState<Record<number, { color: string; coordinates: [number, number][] }>>({});
+  const [countryUnlocks, setCountryUnlocks] = useState<Record<string, number>>({});
+  const [countriesGeoJson, setCountriesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
 
   const fetchTrails = useCallback(async () => {
     try {
@@ -100,6 +106,15 @@ export function RaceMap({
       if (!res.ok) return;
       const data = await res.json();
       setTrails(data);
+    } catch (_) {}
+  }, []);
+
+  const fetchCountryUnlocks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/countries/unlocked");
+      if (!res.ok) return;
+      const data = await res.json();
+      setCountryUnlocks(data);
     } catch (_) {}
   }, []);
 
@@ -169,6 +184,7 @@ export function RaceMap({
       });
       const channel = pusher.subscribe(channelName);
       channel.bind("location-update", (data: TeamLocation) => {
+        fetchCountryUnlocks();
         setTeams((prev) =>
           prev.map((t) =>
             t.teamId === data.teamId
@@ -183,21 +199,39 @@ export function RaceMap({
         );
         fetchTrails();
       });
-      channel.bind("penalty-update", () => fetchTeams());
+      channel.bind("penalty-update", () => {
+        fetchTeams();
+        fetchCountryUnlocks();
+      });
+      channel.bind("country-unlock", () => fetchCountryUnlocks());
       cleanup = () => {
-        channel.unbind("location-update");
-        channel.unbind("penalty-update");
-        pusher.unsubscribe(channelName);
+      channel.unbind("location-update");
+      channel.unbind("penalty-update");
+      channel.unbind("country-unlock");
+      pusher.unsubscribe(channelName);
       };
     });
     return () => cleanup?.();
-  }, [channelName, fetchTeams, fetchTrails]);
+  }, [channelName, fetchTeams, fetchTrails, fetchCountryUnlocks]);
+
+  // Load countries GeoJSON once (for country fill layer)
+  useEffect(() => {
+    let cancelled = false;
+    fetch(COUNTRIES_GEOJSON_URL)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setCountriesGeoJson(data);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Poll: soon, then every 30s.
   useEffect(() => {
     const doFetch = () => {
       fetchTeams();
       fetchTrails();
+      fetchCountryUnlocks();
     };
     const t0 = setTimeout(doFetch, 500);
     const interval = setInterval(doFetch, 30000);
@@ -205,7 +239,7 @@ export function RaceMap({
       clearTimeout(t0);
       clearInterval(interval);
     };
-  }, [fetchTeams, fetchTrails]);
+  }, [fetchTeams, fetchTrails, fetchCountryUnlocks]);
 
   // When buyer completes checkout (popup), refetch so map updates even if Pusher is slow
   useEffect(() => {
@@ -273,6 +307,80 @@ export function RaceMap({
       map.once("load", applyTrails);
     }
   }, [trails]);
+
+  // Country unlocks: fill unlocked countries with the team color that reached them first
+  const countryColors = useMemo(() => {
+    const out: Record<string, string> = {};
+    Object.entries(countryUnlocks).forEach(([code, teamId]) => {
+      const team = teams.find((t) => t.teamId === teamId);
+      if (team?.color) out[code] = team.color;
+    });
+    return out;
+  }, [countryUnlocks, teams]);
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !countriesGeoJson) return;
+
+    const applyCountriesLayer = () => {
+      if (!map.getSource(COUNTRIES_SOURCE_ID)) {
+        map.addSource(COUNTRIES_SOURCE_ID, {
+          type: "geojson",
+          data: countriesGeoJson,
+        });
+      } else {
+        (map.getSource(COUNTRIES_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(
+          countriesGeoJson
+        );
+      }
+
+      const matchExpr: unknown[] = [
+        "match",
+        ["upcase", ["get", "id"]],
+      ];
+      Object.entries(countryColors).forEach(([code, color]) => {
+        matchExpr.push(code, color);
+      });
+      matchExpr.push("rgba(0,0,0,0)");
+
+      if (map.getLayer(COUNTRIES_LAYER_ID)) {
+        map.setPaintProperty(
+          COUNTRIES_LAYER_ID,
+          "fill-color",
+          matchExpr as mapboxgl.Expression
+        );
+        map.setPaintProperty(
+          COUNTRIES_LAYER_ID,
+          "fill-opacity",
+          Object.keys(countryColors).length > 0 ? COUNTRY_FILL_OPACITY : 0
+        );
+      } else {
+        const beforeId = map.getLayer(TRAILS_LAYER_ID)
+          ? TRAILS_LAYER_ID
+          : map.getLayer(TEAMS_LAYER_ID)
+            ? TEAMS_LAYER_ID
+            : undefined;
+        map.addLayer(
+          {
+            id: COUNTRIES_LAYER_ID,
+            type: "fill",
+            source: COUNTRIES_SOURCE_ID,
+            paint: {
+              "fill-color": matchExpr as mapboxgl.Expression,
+              "fill-opacity": Object.keys(countryColors).length > 0 ? COUNTRY_FILL_OPACITY : 0,
+            },
+          },
+          beforeId
+        );
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      applyCountriesLayer();
+    } else {
+      map.once("load", applyCountriesLayer);
+    }
+  }, [countriesGeoJson, countryColors]);
 
   // Fit map to team positions once (so view is centered on live locations, zoomed in enough to see them)
   useEffect(() => {

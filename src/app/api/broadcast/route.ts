@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { broadcastBodySchema } from "@/lib/validation";
 import { roundCoordinate, haversineDistanceKm } from "@/lib/utils";
-import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_LOCATION } from "@/lib/pusher";
+import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_LOCATION, PUSHER_EVENT_COUNTRY_UNLOCK } from "@/lib/pusher";
+import { getCountryCodeFromCoords } from "@/lib/geocode";
 
 const RATE_LIMIT_MS = 5000; // 1 update per 5 seconds per team
 const lastUpdate: Record<number, number> = {};
@@ -72,6 +73,33 @@ export async function POST(req: Request) {
         data: { teamId, lat: displayLat, lng: displayLng },
       }),
     ]);
+
+    // First team to reach a country "unlocks" it (for map coloring)
+    try {
+      const countryCode = await getCountryCodeFromCoords(displayLat, displayLng);
+      if (countryCode) {
+        const existing = await prisma.countryUnlock.findUnique({
+          where: { countryCode },
+        });
+        if (!existing) {
+          await prisma.countryUnlock.create({
+            data: { countryCode, teamId },
+          });
+          if (process.env.PUSHER_APP_ID) {
+            try {
+              await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_COUNTRY_UNLOCK, {
+                countryCode,
+                teamId,
+              });
+            } catch (e) {
+              console.error("Pusher country-unlock:", e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Country unlock check:", e);
+    }
 
     if (process.env.PUSHER_APP_ID) {
       try {
