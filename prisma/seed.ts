@@ -10,8 +10,8 @@ async function main() {
   });
   await prisma.team.upsert({
     where: { id: 2 },
-    update: { name: "Stiven ja Sidni", color: "#EF4444" },
-    create: { id: 2, name: "Stiven ja Sidni", color: "#EF4444" },
+    update: { name: "Stiven ja Sidni", color: "#EF4444", imageUrl: "/team2.png" },
+    create: { id: 2, name: "Stiven ja Sidni", color: "#EF4444", imageUrl: "/team2.png" },
   });
 
   await prisma.penaltyOption.upsert({
