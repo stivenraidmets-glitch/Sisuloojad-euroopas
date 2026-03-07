@@ -68,6 +68,13 @@ async function main() {
     create: { id: "default", status: "pre-race" },
   });
 
+  // Test: Estonia unlocked by Team 1 first (for map color demo)
+  await prisma.countryUnlock.upsert({
+    where: { countryCode: "EE" },
+    create: { countryCode: "EE", teamId: 1 },
+    update: { teamId: 1 },
+  });
+
   const defaultWheelOutcomes = JSON.stringify([
     { type: "NOTHING", value: 0, probability: 50 },
     { type: "RESPIN", value: 0, probability: 25 },
@@ -96,7 +103,7 @@ async function main() {
     data: { freePenaltyBalance: 50 },
   });
 
-  console.log("Seed completed: teams, penalty options, race status, wheel config, system user.");
+  console.log("Seed completed: teams, penalty options, race status, wheel config, system user, Estonia (EE) = Team 1.");
 }
 
 main()
