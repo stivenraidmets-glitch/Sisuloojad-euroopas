@@ -31,6 +31,9 @@ const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
+const GERMANY_CODE = "DE"; // start of race (Berlin); show half team 1 / half team 2
+const GERMANY_PATTERN_ID = "germany-start-pattern";
+const GERMANY_LAYER_ID = "germany-start-fill";
 const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson";
 const COUNTRY_FILL_OPACITY = 0.35;
 export const OPEN_PANEL_TAB = "open-panel-tab" as const;
@@ -404,6 +407,7 @@ export function RaceMap({
         ["upcase", ["coalesce", ["get", "iso_a2"], ["get", "ISO_A2"]]],
       ];
       Object.entries(countryColors).forEach(([code, color]) => {
+        if (code === GERMANY_CODE) return; // Germany drawn separately as half team 1 / half team 2 (start)
         matchExpr.push(code, color);
       });
       matchExpr.push("rgba(0,0,0,0)");
@@ -445,6 +449,50 @@ export function RaceMap({
           beforeId
         );
       }
+
+      // Germany = start (Berlin); fill with half team 1, half team 2
+      const team1 = teams[0];
+      const team2 = teams[1];
+      const color1 = team1?.color ?? "#3b82f6";
+      const color2 = team2?.color ?? "#8b5cf6";
+      const size = 32;
+      const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+      if (canvas) {
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = color1;
+          ctx.fillRect(0, 0, size / 2, size);
+          ctx.fillStyle = color2;
+          ctx.fillRect(size / 2, 0, size / 2, size);
+          const imageData = ctx.getImageData(0, 0, size, size);
+          if (map.hasImage(GERMANY_PATTERN_ID)) map.removeImage(GERMANY_PATTERN_ID);
+          map.addImage(GERMANY_PATTERN_ID, imageData, { width: size, height: size });
+        }
+      }
+      const germanyFilter: mapboxgl.Expression = [
+        "==",
+        ["upcase", ["coalesce", ["get", "iso_a2"], ["get", "ISO_A2"]]],
+        GERMANY_CODE,
+      ];
+      if (map.getLayer(GERMANY_LAYER_ID)) {
+        map.setPaintProperty(GERMANY_LAYER_ID, "fill-opacity", COUNTRY_FILL_OPACITY);
+      } else {
+        map.addLayer(
+          {
+            id: GERMANY_LAYER_ID,
+            type: "fill",
+            source: COUNTRIES_SOURCE_ID,
+            filter: germanyFilter,
+            paint: {
+              "fill-pattern": GERMANY_PATTERN_ID,
+              "fill-opacity": COUNTRY_FILL_OPACITY,
+            },
+          },
+          COUNTRIES_LAYER_ID
+        );
+      }
     };
 
     if (map.isStyleLoaded()) {
@@ -452,7 +500,7 @@ export function RaceMap({
     } else {
       map.once("load", applyCountriesLayer);
     }
-  }, [countriesGeoJson, countryColors]);
+  }, [countriesGeoJson, countryColors, teams]);
 
   // Fit map to team positions once (so view is centered on live locations, zoomed in enough to see them)
   useEffect(() => {
