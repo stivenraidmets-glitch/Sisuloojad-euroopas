@@ -17,7 +17,9 @@ type CountryUnlockWithTeam = Awaited<ReturnType<typeof prisma.countryUnlock.find
 };
 
 export default async function AdminPage() {
-  const results = await Promise.allSettled([
+  let results: PromiseSettledResult<unknown>[];
+  try {
+    results = await Promise.allSettled([
     prisma.team.findMany({ orderBy: { id: "asc" } }),
     prisma.penalty.findMany({
       orderBy: { createdAt: "desc" },
@@ -37,13 +39,27 @@ export default async function AdminPage() {
       include: { team: { select: { id: true, name: true, color: true } } },
     }),
   ]);
+  } catch (e) {
+    console.error("Admin page load error:", e);
+    return (
+      <div className="container flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-12">
+        <h1 className="text-xl font-semibold">Admin panel – load error</h1>
+        <p className="max-w-md text-center text-muted-foreground">
+          Could not load data (database or server). Check Vercel env: DATABASE_URL, then redeploy and try again.
+        </p>
+        <a href="/adminpaneel" className="rounded bg-primary px-4 py-2 text-primary-foreground hover:opacity-90">
+          Try again
+        </a>
+      </div>
+    );
+  }
 
-  const teams = results[0].status === "fulfilled" ? results[0].value : [];
-  const penalties = results[1].status === "fulfilled" ? results[1].value : [];
-  const purchases = results[2].status === "fulfilled" ? results[2].value : [];
-  const raceStatus = results[3].status === "fulfilled" ? results[3].value : null;
-  const wheelConfig = results[4].status === "fulfilled" ? results[4].value : null;
-  const voteCounts = results[5].status === "fulfilled" ? results[5].value : [];
+  const teams = (results[0].status === "fulfilled" ? results[0].value : []) as Awaited<ReturnType<typeof prisma.team.findMany>>;
+  const penalties = (results[1].status === "fulfilled" ? results[1].value : []) as PenaltyWithRelations[];
+  const purchases = (results[2].status === "fulfilled" ? results[2].value : []) as PurchaseWithRelations[];
+  const raceStatus = (results[3].status === "fulfilled" ? results[3].value : null) as { status?: string } | null;
+  const wheelConfig = (results[4].status === "fulfilled" ? results[4].value : null) as { outcomesJson?: string } | null;
+  const voteCounts = (results[5].status === "fulfilled" ? results[5].value : []) as { teamId: number; _count: number }[];
   const countryUnlocks = (results[6].status === "fulfilled" ? results[6].value : []) as CountryUnlockWithTeam[];
 
   const failedCount = results.filter((r) => r.status === "rejected").length;
