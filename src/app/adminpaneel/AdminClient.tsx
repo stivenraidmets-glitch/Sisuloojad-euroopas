@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
+export { TeamLocationMapWithControls } from "./AdminTeamLocationMap";
+
 type CountryUnlockWithTeam = {
   id: string;
   countryCode: string;

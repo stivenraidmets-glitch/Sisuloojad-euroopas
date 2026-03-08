@@ -5,7 +5,7 @@ import {
   ChatControls,
   TeamDistanceControls,
   CountryUnlockControls,
-  SetTeamLocation,
+  TeamLocationMapWithControls,
   PenaltyActions,
 } from "./AdminClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,35 +122,24 @@ export default async function AdminPage() {
       <Card>
         <CardHeader>
           <CardTitle>Meeskonnad</CardTitle>
-          <CardDescription>Asukoht ja häälete arv</CardDescription>
+          <CardDescription>Lohista meeskondi minikaardil, sea asukoht või kasuta viimast otseülekande asukohta. Hääled all.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {teams.map((t) => (
-            <div key={t.id} className="rounded border p-4">
-              <div className="flex justify-between">
-                <div>
-                  <span className="font-medium">{t.name}</span>
-                  <span
-                    className="ml-2 inline-block h-3 w-3 rounded-full"
-                    style={{ backgroundColor: t.color }}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {t.lastLat != null && t.lastLng != null
-                      ? `${t.lastLat.toFixed(4)}, ${t.lastLng.toFixed(4)}`
-                      : "Asukoht puudub"}
-                    {t.lastUpdatedAt && ` · ${t.lastUpdatedAt.toISOString()}`}
-                  </p>
-                </div>
-                <p>Hääli: {voteCounts.find((v) => v.teamId === t.id)?._count ?? 0}</p>
+          <TeamLocationMapWithControls teams={teams} />
+          <div className="flex flex-wrap gap-4 border-t pt-4">
+            {teams.map((t) => (
+              <div key={t.id} className="flex items-center gap-2">
+                <span className="font-medium">{t.name}</span>
+                <span
+                  className="inline-block h-3 w-3 rounded-full"
+                  style={{ backgroundColor: t.color }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  Hääli: {voteCounts.find((v) => v.teamId === t.id)?._count ?? 0}
+                </span>
               </div>
-              <SetTeamLocation
-                teamId={t.id}
-                teamName={t.name}
-                currentLat={t.lastLat}
-                currentLng={t.lastLng}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </CardContent>
       </Card>
 

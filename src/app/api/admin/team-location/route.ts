@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_LOCATION } from "@/lib/pusher";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -31,6 +32,19 @@ export async function POST(req: Request) {
     where: { id: teamId },
     data: { lastLat: lat, lastLng: lng, lastUpdatedAt: new Date() },
   });
+
+  if (process.env.PUSHER_APP_ID) {
+    try {
+      await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_LOCATION, {
+        teamId,
+        lat,
+        lng,
+        lastUpdatedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error("Admin team-location: Pusher failed", e);
+    }
+  }
 
   return NextResponse.json({ success: true });
 }
