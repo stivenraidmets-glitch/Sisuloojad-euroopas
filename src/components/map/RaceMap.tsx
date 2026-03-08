@@ -110,6 +110,7 @@ export function RaceMap({
   const teamPopupRef = useRef<mapboxgl.Popup | null>(null);
   const teamPopupRootRef = useRef<Root | null>(null);
   const teamsRef = useRef<TeamState[]>([]);
+  const timerElementsRef = useRef<Map<number, HTMLElement>>(new Map());
   const voteHandlerRef = useRef<((teamId: number) => Promise<void>) | null>(null);
   const { status } = useSession();
   const { toast } = useToast();
@@ -293,7 +294,7 @@ export function RaceMap({
     return () => { cancelled = true; };
   }, []);
 
-  // Poll: soon, then every 30s.
+  // Poll: soon, then every 10s (so map updates even if Pusher is slow or missing).
   useEffect(() => {
     const doFetch = () => {
       fetchTeams();
@@ -301,7 +302,7 @@ export function RaceMap({
       fetchCountryUnlocks();
     };
     const t0 = setTimeout(doFetch, 500);
-    const interval = setInterval(doFetch, 30000);
+    const interval = setInterval(doFetch, 10000);
     return () => {
       clearTimeout(t0);
       clearInterval(interval);
@@ -315,11 +316,22 @@ export function RaceMap({
     return () => window.removeEventListener("checkout-success", onCheckout);
   }, [fetchTeams]);
 
-  // Countdown ticker for penalty timers
+  // Countdown ticker for penalty timers: update React state and live-update marker timer DOM
   useEffect(() => {
     const hasActive = teams.some((t) => t.activePenalty != null);
     if (!hasActive) return;
-    const interval = setInterval(() => setNow(new Date()), 1000);
+    const interval = setInterval(() => {
+      setNow((n) => new Date());
+      const currentTeams = teamsRef.current ?? [];
+      timerElementsRef.current.forEach((el, teamId) => {
+        const team = currentTeams.find((x) => x.teamId === teamId);
+        if (!team?.activePenalty) return;
+        const text = team.activePenalty.endsAt
+          ? `❄️ ${team.name}: ${team.activePenalty.title} (${formatRemainingStatic(team.activePenalty.endsAt)})`
+          : `❄️ ${team.name}: ${team.activePenalty.title} (aktiivne)`;
+        el.textContent = text;
+      });
+    }, 1000);
     return () => clearInterval(interval);
   }, [teams]);
 
@@ -595,6 +607,9 @@ export function RaceMap({
         wrapper.style.flexDirection = "column";
         wrapper.style.alignItems = "center";
         wrapper.style.cursor = "pointer";
+        if (!t.activePenalty) {
+          timerElementsRef.current.delete(t.teamId);
+        }
         if (t.activePenalty) {
           const timerText = t.activePenalty.endsAt
             ? `❄️ ${t.name}: ${t.activePenalty.title} (${formatRemainingStatic(t.activePenalty.endsAt)})`
@@ -609,6 +624,7 @@ export function RaceMap({
           timerEl.style.borderRadius = "4px";
           timerEl.style.marginBottom = "2px";
           wrapper.appendChild(timerEl);
+          timerElementsRef.current.set(t.teamId, timerEl);
         }
         const el = document.createElement("div");
         el.style.width = `${TEAM_MARKER_SIZE_PX}px`;
@@ -695,6 +711,7 @@ export function RaceMap({
         if (!toShow.has(teamId)) {
           marker.remove();
           teamMarkersRef.current.delete(teamId);
+          timerElementsRef.current.delete(teamId);
         }
       });
     };
@@ -733,11 +750,12 @@ export function RaceMap({
     }
   }, [teams]);
 
-  // Clean up markers and popup only on unmount
+  // Clean up markers, timer refs, and popup only on unmount
   useEffect(() => {
     return () => {
       teamMarkersRef.current.forEach((m) => m.remove());
       teamMarkersRef.current.clear();
+      timerElementsRef.current.clear();
       teamPopupRef.current?.remove();
       teamPopupRef.current = null;
       teamPopupRootRef.current?.unmount();
