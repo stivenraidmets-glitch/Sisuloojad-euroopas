@@ -35,8 +35,34 @@ export default async function AdminLayout({
     );
   }
   const email = session?.user?.email?.toLowerCase();
-  if (!email || !ADMIN_EMAILS.includes(email)) {
+  if (!email) {
     redirect("/login?callbackUrl=/admin");
+  }
+  if (ADMIN_EMAILS.length === 0) {
+    return (
+      <div className="container flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-12">
+        <h1 className="text-xl font-semibold">Halduspaneel – ADMIN_EMAILS puudub</h1>
+        <p className="max-w-md text-center text-muted-foreground">
+          Lisa Vercelis (Settings → Environment Variables) muutuja <strong>ADMIN_EMAILS</strong> ja pane väärtuseks oma e-mail, nt <code className="rounded bg-muted px-1">test@test.com</code>. Seejärel redeploy.
+        </p>
+        <Link href="/admin" className="rounded bg-primary px-4 py-2 text-primary-foreground hover:opacity-90">
+          Proovi uuesti
+        </Link>
+      </div>
+    );
+  }
+  if (!ADMIN_EMAILS.includes(email)) {
+    return (
+      <div className="container flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-12">
+        <h1 className="text-xl font-semibold">Halduspaneel – puudub õigus</h1>
+        <p className="max-w-md text-center text-muted-foreground">
+          Sinu e-mail ({email}) ei ole adminide nimekirjas. Lisa Vercelis keskkonnamuutujasse <strong>ADMIN_EMAILS</strong> see e-mail (komadega eraldatud, kui mitu), seejärel redeploy.
+        </p>
+        <Link href="/" className="rounded bg-primary px-4 py-2 text-primary-foreground hover:opacity-90">
+          Tagasi avalehele
+        </Link>
+      </div>
+    );
   }
   return <>{children}</>;
 }
