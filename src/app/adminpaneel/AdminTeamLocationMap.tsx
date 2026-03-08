@@ -11,8 +11,8 @@ const MAP_CENTER: [number, number] = [13.4, 52.5];
 const MAP_ZOOM = 4;
 const MARKER_SIZE_PX = 36;
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
-  1: [13.405, 52.52],   // Berlin
-  2: [24.7536, 59.437], // Tallinn
+  1: [-3.7038, 40.4168], // Madrid, Spain (start)
+  2: [24.7536, 59.437],  // Tallinn
 };
 
 function getTeamImageUrl(teamId: number, imageUrl?: string | null): string {
@@ -38,8 +38,8 @@ export function TeamLocationMapWithControls({ teams }: { teams: TeamForLocation[
       teams.map((t) => [
         t.id,
         {
-          lat: t.lastLat ?? DEFAULT_POSITIONS[t.id]?.[1] ?? 52.52,
-          lng: t.lastLng ?? DEFAULT_POSITIONS[t.id]?.[0] ?? 13.405,
+          lat: t.lastLat ?? DEFAULT_POSITIONS[t.id]?.[1] ?? 40.4168,
+          lng: t.lastLng ?? DEFAULT_POSITIONS[t.id]?.[0] ?? -3.7038,
         },
       ])
     )
@@ -122,7 +122,7 @@ export function TeamLocationMapWithControls({ teams }: { teams: TeamForLocation[
 
     map.on("load", () => {
       teams.forEach((t) => {
-        const pos = positions[t.id] ?? { lat: DEFAULT_POSITIONS[t.id]?.[1] ?? 52.52, lng: DEFAULT_POSITIONS[t.id]?.[0] ?? 13.405 };
+        const pos = positions[t.id] ?? { lat: DEFAULT_POSITIONS[t.id]?.[1] ?? 40.4168, lng: DEFAULT_POSITIONS[t.id]?.[0] ?? -3.7038 };
         const el = document.createElement("div");
         el.style.width = `${MARKER_SIZE_PX}px`;
         el.style.height = `${MARKER_SIZE_PX}px`;
