@@ -1,6 +1,13 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import { AdminClient } from "./AdminClient";
+import {
+  AdminClient,
+  ChatControls,
+  TeamDistanceControls,
+  CountryUnlockControls,
+  SetTeamLocation,
+  PenaltyActions,
+} from "./AdminClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -88,7 +95,7 @@ export default async function AdminPage() {
           <CardDescription>Tühjenda vestlus</CardDescription>
         </CardHeader>
         <CardContent>
-          <AdminClient.ChatControls />
+          <ChatControls />
         </CardContent>
       </Card>
 
@@ -98,7 +105,7 @@ export default async function AdminPage() {
           <CardDescription>Lähtesta või sea käsitsi väärtus</CardDescription>
         </CardHeader>
         <CardContent>
-          <AdminClient.TeamDistanceControls teams={teams} />
+          <TeamDistanceControls teams={teams} />
         </CardContent>
       </Card>
 
@@ -108,7 +115,7 @@ export default async function AdminPage() {
           <CardDescription>Lisa riik meeskonnale või eemalda. Kaart uuendub kohe.</CardDescription>
         </CardHeader>
         <CardContent>
-          <AdminClient.CountryUnlockControls initialUnlocks={countryUnlocks.map((u) => ({ ...u, unlockedAt: u.unlockedAt.toISOString() }))} teams={teams} />
+          <CountryUnlockControls initialUnlocks={countryUnlocks.map((u) => ({ ...u, unlockedAt: u.unlockedAt.toISOString() }))} teams={teams} />
         </CardContent>
       </Card>
 
@@ -136,7 +143,7 @@ export default async function AdminPage() {
                 </div>
                 <p>Hääli: {voteCounts.find((v) => v.teamId === t.id)?._count ?? 0}</p>
               </div>
-              <AdminClient.SetTeamLocation
+              <SetTeamLocation
                 teamId={t.id}
                 teamName={t.name}
                 currentLat={t.lastLat}
@@ -159,7 +166,7 @@ export default async function AdminPage() {
                 <span>
                   {p.penaltyOption.title} → {p.team.name} ({p.status})
                 </span>
-                <AdminClient.PenaltyActions penaltyId={p.id} status={p.status} />
+                <PenaltyActions penaltyId={p.id} status={p.status} />
               </li>
             ))}
           </ul>

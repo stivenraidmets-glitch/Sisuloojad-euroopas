@@ -182,7 +182,7 @@ function PenaltyActions({
   );
 }
 
-AdminClient.PenaltyActions = PenaltyActions;
+export { PenaltyActions };
 
 function SetTeamLocation({
   teamId,
@@ -247,7 +247,7 @@ function SetTeamLocation({
   );
 }
 
-AdminClient.SetTeamLocation = SetTeamLocation;
+export { SetTeamLocation };
 
 function ChatControls() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -283,7 +283,7 @@ function ChatControls() {
   );
 }
 
-AdminClient.ChatControls = ChatControls;
+export { ChatControls };
 
 function TeamDistanceControls({ teams }: { teams: TeamRow[] }) {
   const [saving, setSaving] = useState<number | null>(null);
@@ -361,7 +361,7 @@ function TeamDistanceControls({ teams }: { teams: TeamRow[] }) {
   );
 }
 
-AdminClient.TeamDistanceControls = TeamDistanceControls;
+export { TeamDistanceControls };
 
 function CountryUnlockControls({
   initialUnlocks,
@@ -460,4 +460,4 @@ function CountryUnlockControls({
   );
 }
 
-AdminClient.CountryUnlockControls = CountryUnlockControls;
+export { CountryUnlockControls };
