@@ -582,62 +582,8 @@ export function RaceMap({
         const teamId = t.teamId;
         const existing = teamMarkersRef.current.get(t.teamId);
         if (existing) {
-          existing.setElement(wrapper);
-          existing.setLngLat([lng, lat]);
-          wrapper.addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            const team = teamsRef.current.find((x) => x.teamId === teamId);
-            if (!team) return;
-            if (teamPopupRef.current) {
-              teamPopupRef.current.remove();
-              teamPopupRef.current = null;
-            }
-            if (teamPopupRootRef.current) {
-              teamPopupRootRef.current.unmount();
-              teamPopupRootRef.current = null;
-            }
-            const container = document.createElement("div");
-            const root = createRoot(container);
-            teamPopupRootRef.current = root;
-            const formatRemainingFn = (endsAt: string) => {
-              const end = new Date(endsAt).getTime();
-              const secs = Math.max(0, Math.floor((end - Date.now()) / 1000));
-              const m = Math.floor(secs / 60);
-              const s = secs % 60;
-              return `${m}:${s.toString().padStart(2, "0")}`;
-            };
-            root.render(
-              <TeamMarkerPopup
-                teamName={team.name}
-                totalDistanceKm={team.totalDistanceKm}
-                activePenalty={team.activePenalty}
-                formatRemaining={formatRemainingFn}
-                onVote={async () => voteHandlerRef.current?.(teamId)}
-                onBuyPunishment={() => {
-                  window.dispatchEvent(
-                    new CustomEvent(OPEN_PANEL_TAB, { detail: { tab: "punishments" as const } })
-                  );
-                  teamPopupRef.current?.remove();
-                  teamPopupRef.current = null;
-                }}
-              />
-            );
-            const popup = new mapboxgl.Popup({
-              closeButton: true,
-              closeOnClick: false,
-              className: "team-marker-popup",
-            })
-              .setLngLat([lng, lat])
-              .setDOMContent(container)
-              .addTo(map);
-            teamPopupRef.current = popup;
-            popup.on("close", () => {
-              root.unmount();
-              teamPopupRootRef.current = null;
-              teamPopupRef.current = null;
-            });
-          });
-          return;
+          existing.remove();
+          teamMarkersRef.current.delete(t.teamId);
         }
         wrapper.addEventListener("click", (ev) => {
           ev.stopPropagation();
