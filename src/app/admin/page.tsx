@@ -12,6 +12,10 @@ type PurchaseWithRelations = Prisma.PurchaseGetPayload<{
   include: { penaltyOption: true; team: true };
 }>;
 
+type CountryUnlockWithTeam = Awaited<ReturnType<typeof prisma.countryUnlock.findMany>>[number] & {
+  team: { id: number; name: string; color: string };
+};
+
 export default async function AdminPage() {
   let teams: Awaited<ReturnType<typeof prisma.team.findMany>>;
   let penalties: PenaltyWithRelations[];
@@ -19,9 +23,10 @@ export default async function AdminPage() {
   let raceStatus: { status: string } | null;
   let wheelConfig: { outcomesJson: string } | null;
   let voteCounts: { teamId: number; _count: number }[];
+  let countryUnlocks: CountryUnlockWithTeam[];
 
   try {
-    const [teamsResult, penaltiesResult, purchasesResult, raceStatusResult, wheelConfigResult, voteCountsResult] =
+    const [teamsResult, penaltiesResult, purchasesResult, raceStatusResult, wheelConfigResult, voteCountsResult, unlocksResult] =
       await Promise.all([
         prisma.team.findMany({ orderBy: { id: "asc" } }),
         prisma.penalty.findMany({
@@ -43,6 +48,10 @@ export default async function AdminPage() {
           by: ["teamId"],
           _count: true,
         }),
+        prisma.countryUnlock.findMany({
+          orderBy: { unlockedAt: "asc" },
+          include: { team: { select: { id: true, name: true, color: true } } },
+        }),
       ]);
     teams = teamsResult;
     penalties = penaltiesResult;
@@ -50,6 +59,7 @@ export default async function AdminPage() {
     raceStatus = raceStatusResult;
     wheelConfig = wheelConfigResult;
     voteCounts = voteCountsResult;
+    countryUnlocks = unlocksResult as CountryUnlockWithTeam[];
   } catch (e) {
     console.error("Admin page data error:", e);
     const message = e instanceof Error ? e.message : String(e);
@@ -77,7 +87,38 @@ export default async function AdminPage() {
       <AdminClient
         initialRaceStatus={raceStatus?.status ?? "pre-race"}
         initialWheelConfig={wheelConfig?.outcomesJson ?? "[]"}
+        initialUnlocks={countryUnlocks.map((u) => ({ ...u, unlockedAt: u.unlockedAt.toISOString() }))}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vestlus (chat)</CardTitle>
+          <CardDescription>Tühjenda vestlus</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminClient.ChatControls />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Meeskonna läbitud distants (km)</CardTitle>
+          <CardDescription>Lähtesta või sea käsitsi väärtus</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminClient.TeamDistanceControls teams={teams} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Riigid (esimesena jõudnud meeskond)</CardTitle>
+          <CardDescription>Lisa riik meeskonnale või eemalda. Kaart uuendub kohe.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AdminClient.CountryUnlockControls initialUnlocks={countryUnlocks.map((u) => ({ ...u, unlockedAt: u.unlockedAt.toISOString() }))} teams={teams} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
