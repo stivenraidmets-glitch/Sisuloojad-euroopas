@@ -27,6 +27,12 @@ function formatRemainingStatic(endsAt: string): string {
   const s = secs % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
+
+function isPenaltyStillActive(activePenalty: ActivePenalty | null): boolean {
+  if (!activePenalty) return false;
+  if (!activePenalty.endsAt) return true;
+  return new Date(activePenalty.endsAt).getTime() > Date.now();
+}
 const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
@@ -294,7 +300,7 @@ export function RaceMap({
     return () => { cancelled = true; };
   }, []);
 
-  // Poll: soon, then every 10s (so map updates even if Pusher is slow or missing).
+  // Poll: soon, then every 5s (so new punishments and timer end show without refresh).
   useEffect(() => {
     const doFetch = () => {
       fetchTeams();
@@ -302,7 +308,7 @@ export function RaceMap({
       fetchCountryUnlocks();
     };
     const t0 = setTimeout(doFetch, 500);
-    const interval = setInterval(doFetch, 10000);
+    const interval = setInterval(doFetch, 5000);
     return () => {
       clearTimeout(t0);
       clearInterval(interval);
@@ -316,24 +322,40 @@ export function RaceMap({
     return () => window.removeEventListener("checkout-success", onCheckout);
   }, [fetchTeams]);
 
-  // Countdown ticker for penalty timers: update React state and live-update marker timer DOM
+  // Countdown ticker for penalty timers: update timer DOM; when 0, remove timer and refetch
   useEffect(() => {
-    const hasActive = teams.some((t) => t.activePenalty != null);
+    const hasActive = teams.some((t) => isPenaltyStillActive(t.activePenalty));
     if (!hasActive) return;
     const interval = setInterval(() => {
       setNow((n) => new Date());
       const currentTeams = teamsRef.current ?? [];
+      const toRemove: number[] = [];
       timerElementsRef.current.forEach((el, teamId) => {
         const team = currentTeams.find((x) => x.teamId === teamId);
-        if (!team?.activePenalty) return;
+        if (!team?.activePenalty) {
+          toRemove.push(teamId);
+          return;
+        }
+        if (!isPenaltyStillActive(team.activePenalty)) {
+          toRemove.push(teamId);
+          return;
+        }
         const text = team.activePenalty.endsAt
           ? `❄️ ${team.name}: ${team.activePenalty.title} (${formatRemainingStatic(team.activePenalty.endsAt)})`
           : `❄️ ${team.name}: ${team.activePenalty.title} (aktiivne)`;
         el.textContent = text;
       });
+      toRemove.forEach((teamId) => {
+        const el = timerElementsRef.current.get(teamId);
+        if (el?.parentNode) {
+          el.parentNode.removeChild(el);
+        }
+        timerElementsRef.current.delete(teamId);
+      });
+      if (toRemove.length > 0) fetchTeams();
     }, 1000);
     return () => clearInterval(interval);
-  }, [teams]);
+  }, [teams, fetchTeams]);
 
   // Draw team trails (lines behind the dots)
   useEffect(() => {
@@ -568,7 +590,7 @@ export function RaceMap({
         (lat === 0 && lng === 0)
       )
         return;
-      const isFrozen = t.activePenalty != null;
+      const isFrozen = isPenaltyStillActive(t.activePenalty);
       const hasImage = !!(t.imageUrl ?? "").trim();
       features.push({
         type: "Feature",
@@ -607,10 +629,10 @@ export function RaceMap({
         wrapper.style.flexDirection = "column";
         wrapper.style.alignItems = "center";
         wrapper.style.cursor = "pointer";
-        if (!t.activePenalty) {
+        if (!isPenaltyStillActive(t.activePenalty)) {
           timerElementsRef.current.delete(t.teamId);
         }
-        if (t.activePenalty) {
+        if (isPenaltyStillActive(t.activePenalty) && t.activePenalty) {
           const timerText = t.activePenalty.endsAt
             ? `❄️ ${t.name}: ${t.activePenalty.title} (${formatRemainingStatic(t.activePenalty.endsAt)})`
             : `❄️ ${t.name}: ${t.activePenalty.title} (aktiivne)`;
@@ -773,7 +795,7 @@ export function RaceMap({
     );
   }
 
-  const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
+  const teamsWithPenalty = teams.filter((t) => isPenaltyStillActive(t.activePenalty));
 
   // Distance between the two teams (when both have valid positions)
   const team1 = teams[0];
