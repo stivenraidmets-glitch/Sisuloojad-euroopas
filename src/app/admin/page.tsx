@@ -17,72 +17,48 @@ type CountryUnlockWithTeam = Awaited<ReturnType<typeof prisma.countryUnlock.find
 };
 
 export default async function AdminPage() {
-  let teams: Awaited<ReturnType<typeof prisma.team.findMany>>;
-  let penalties: PenaltyWithRelations[];
-  let purchases: PurchaseWithRelations[];
-  let raceStatus: { status: string } | null;
-  let wheelConfig: { outcomesJson: string } | null;
-  let voteCounts: { teamId: number; _count: number }[];
-  let countryUnlocks: CountryUnlockWithTeam[];
+  const results = await Promise.allSettled([
+    prisma.team.findMany({ orderBy: { id: "asc" } }),
+    prisma.penalty.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { penaltyOption: true, team: true },
+    }),
+    prisma.purchase.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: { penaltyOption: true, team: true },
+    }),
+    prisma.raceStatus.findUnique({ where: { id: "default" } }),
+    prisma.wheelConfig.findUnique({ where: { id: "default" } }),
+    prisma.vote.groupBy({ by: ["teamId"], _count: true }),
+    prisma.countryUnlock.findMany({
+      orderBy: { unlockedAt: "asc" },
+      include: { team: { select: { id: true, name: true, color: true } } },
+    }),
+  ]);
 
-  try {
-    const [teamsResult, penaltiesResult, purchasesResult, raceStatusResult, wheelConfigResult, voteCountsResult, unlocksResult] =
-      await Promise.all([
-        prisma.team.findMany({ orderBy: { id: "asc" } }),
-        prisma.penalty.findMany({
-          orderBy: { createdAt: "desc" },
-          take: 50,
-          include: {
-            penaltyOption: true,
-            team: true,
-          },
-        }),
-        prisma.purchase.findMany({
-          orderBy: { createdAt: "desc" },
-          take: 30,
-          include: { penaltyOption: true, team: true },
-        }),
-        prisma.raceStatus.findUnique({ where: { id: "default" } }),
-        prisma.wheelConfig.findUnique({ where: { id: "default" } }),
-        prisma.vote.groupBy({
-          by: ["teamId"],
-          _count: true,
-        }),
-        prisma.countryUnlock.findMany({
-          orderBy: { unlockedAt: "asc" },
-          include: { team: { select: { id: true, name: true, color: true } } },
-        }),
-      ]);
-    teams = teamsResult;
-    penalties = penaltiesResult;
-    purchases = purchasesResult;
-    raceStatus = raceStatusResult;
-    wheelConfig = wheelConfigResult;
-    voteCounts = voteCountsResult;
-    countryUnlocks = unlocksResult as CountryUnlockWithTeam[];
-  } catch (e) {
-    console.error("Admin page data error:", e);
-    const message = e instanceof Error ? e.message : String(e);
-    return (
-      <div className="container max-w-md space-y-4 px-4 py-12">
-        <h1 className="text-xl font-semibold">Halduspaneel – viga</h1>
-        <p className="text-muted-foreground">
-          Andmebaasiga ühendus ebaõnnestus. Kontrolli Vercelis:
-        </p>
-        <ul className="list-inside list-disc text-sm text-muted-foreground">
-          <li><strong>DATABASE_URL</strong> – õige Neon connection string</li>
-          <li><strong>NEXTAUTH_SECRET</strong> – peab olema seatud</li>
-          <li><strong>NEXTAUTH_URL</strong> – https://sisuloojad-euroopas.vercel.app (ilma lõpuslashita)</li>
-          <li><strong>ADMIN_EMAILS</strong> – sinu e-mail (komadega eraldatud, kui mitu)</li>
-        </ul>
-        <p className="text-xs text-muted-foreground">Tehniline: {message}</p>
-      </div>
-    );
-  }
+  const teams = results[0].status === "fulfilled" ? results[0].value : [];
+  const penalties = results[1].status === "fulfilled" ? results[1].value : [];
+  const purchases = results[2].status === "fulfilled" ? results[2].value : [];
+  const raceStatus = results[3].status === "fulfilled" ? results[3].value : null;
+  const wheelConfig = results[4].status === "fulfilled" ? results[4].value : null;
+  const voteCounts = results[5].status === "fulfilled" ? results[5].value : [];
+  const countryUnlocks = (results[6].status === "fulfilled" ? results[6].value : []) as CountryUnlockWithTeam[];
+
+  const failedCount = results.filter((r) => r.status === "rejected").length;
+  results.forEach((r, i) => {
+    if (r.status === "rejected") console.error("Admin query failed:", i, r.reason);
+  });
 
   return (
     <div className="container space-y-8 px-4 py-8">
       <h1 className="text-2xl font-bold">Halduspaneel</h1>
+      {failedCount > 0 && (
+        <div className="rounded border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+          Mõned andmed ei laadinud ({failedCount} päringut ebaõnnestus). Proovi uuesti või kontrolli andmebaasi.
+        </div>
+      )}
 
       <AdminClient
         initialRaceStatus={raceStatus?.status ?? "pre-race"}
