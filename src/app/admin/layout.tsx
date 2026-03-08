@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
@@ -13,7 +14,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let session: Awaited<ReturnType<typeof getServerSession>> = null;
+  let session: Session | null = null;
   try {
     session = await getServerSession(authOptions);
   } catch (e) {
