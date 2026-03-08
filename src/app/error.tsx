@@ -15,7 +15,10 @@ export default function Error({
   }, [error]);
 
   const hint = error.message?.trim() || "Tundmatu viga.";
+  const isProductionOmitted =
+    hint.includes("omitted in production") || hint.includes("Server Components render");
   const showEnvHint =
+    isProductionOmitted ||
     hint.includes("DATABASE") ||
     hint.includes("NEXTAUTH") ||
     hint.includes("secret") ||
@@ -26,7 +29,9 @@ export default function Error({
     <div className="container flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-12">
       <h1 className="text-xl font-semibold">Midagi läks valesti</h1>
       <p className="max-w-md text-center text-muted-foreground">
-        {hint}
+        {isProductionOmitted
+          ? "Serveri viga. Kontrolli Vercelis keskkonnamuutujaid ja tee redeploy."
+          : hint}
       </p>
       {showEnvHint && (
         <p className="max-w-md text-center text-sm text-muted-foreground">
