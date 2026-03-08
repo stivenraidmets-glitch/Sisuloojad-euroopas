@@ -41,7 +41,7 @@ export default function AdminError({
       </div>
       <div className="flex gap-2">
         <Button variant="outline" asChild>
-          <Link href="/login?callbackUrl=/admin">Logi sisse</Link>
+          <Link href="/login?callbackUrl=/adminpaneel">Logi sisse</Link>
         </Button>
         <Button onClick={() => reset()}>Proovi uuesti</Button>
       </div>

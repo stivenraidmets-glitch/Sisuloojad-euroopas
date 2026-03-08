@@ -141,7 +141,7 @@ The map shows a pin per team when that team has a location set. You can do it in
 ### Option A: Test with admin (no phone needed)
 
 1. Log in with an **admin** email (the one you put in `ADMIN_EMAILS` in `.env.local`), or use the dev login and then add that same email to `ADMIN_EMAILS` and log in again.
-2. Go to **http://localhost:3000/admin**
+2. Go to **http://localhost:3000/adminpaneel**
 3. Under **Teams**, for each team you’ll see **Lat** and **Lng** and a **Set location** button.
 4. Enter coordinates (e.g. Paris: Lat `48.86`, Lng `2.35` for Team 1; Tallinn: Lat `59.44`, Lng `24.75` for Team 2) and click **Set location**.
 5. Open the home page (or refresh it). The map updates about every 30 seconds, or refresh to see the pins right away.

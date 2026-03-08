@@ -86,7 +86,7 @@ Open [http://localhost:3000](http://localhost:3000).
    ```
    Put the printed `whsec_...` in `STRIPE_WEBHOOK_SECRET`.
 7. **Broadcast**: Open `/broadcast?secret=YOUR_BROADCAST_SECRET`, choose team, “Start sharing location”. Allow browser geolocation; position updates every 30s with jitter.
-8. **Admin**: Set your email in `ADMIN_EMAILS`, log in, go to `/admin`. Change race status, wheel config, and penalty statuses.
+8. **Admin**: Set your email in `ADMIN_EMAILS`, log in, go to `/adminpaneel`. Change race status, wheel config, and penalty statuses.
 
 ## Map provider (Mapbox)
 
@@ -124,7 +124,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - `/team/1`, `/team/2` — Team detail + penalties list
 - `/login` — Email magic link
 - `/broadcast` — Team location broadcaster (query: `?secret=...`)
-- `/admin` — Admin dashboard (admin emails only)
+- `/adminpaneel` — Admin dashboard (currently open; was admin emails only)
 
 ## Security
 
