@@ -34,7 +34,7 @@ export function TeamMarkerPopup({
   },
 }: TeamMarkerPopupProps) {
   return (
-    <div className="min-w-[200px] max-w-[260px] rounded-lg border border-white/10 bg-card p-3 shadow-lg">
+    <div className="min-w-[200px] max-w-[260px] rounded-lg bg-card p-3 shadow-lg">
       <h3 className="font-semibold text-sm text-foreground">{teamName}</h3>
       <p className="mt-1 text-xs text-muted-foreground">
         Läbitud: <span className="font-medium text-foreground">{totalDistanceKm.toFixed(1)} km</span>

@@ -19,6 +19,14 @@ const SINGLE_POINT_ZOOM = 5; // zoom when only one team has location
 const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
 const TEAM_MARKER_SIZE_PX = 40; // size of profile image markers (HTML markers for correct PNG transparency)
+
+function formatRemainingStatic(endsAt: string): string {
+  const end = new Date(endsAt).getTime();
+  const secs = Math.max(0, Math.floor((end - Date.now()) / 1000));
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
@@ -533,12 +541,27 @@ export function RaceMap({
         )
           return;
         toShow.add(t.teamId);
-        const existing = teamMarkersRef.current.get(t.teamId);
-        if (existing) {
-          existing.setLngLat([lng, lat]);
-          return;
-        }
         const url = raw.startsWith("http") ? raw : `${origin}${raw.startsWith("/") ? "" : "/"}${raw}`;
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.flexDirection = "column";
+        wrapper.style.alignItems = "center";
+        wrapper.style.cursor = "pointer";
+        if (t.activePenalty) {
+          const timerText = t.activePenalty.endsAt
+            ? `❄️ ${t.name}: ${t.activePenalty.title} (${formatRemainingStatic(t.activePenalty.endsAt)})`
+            : `❄️ ${t.name}: ${t.activePenalty.title} (aktiivne)`;
+          const timerEl = document.createElement("div");
+          timerEl.textContent = timerText;
+          timerEl.style.whiteSpace = "nowrap";
+          timerEl.style.fontSize = "10px";
+          timerEl.style.background = "rgba(0,0,0,0.85)";
+          timerEl.style.color = "#fff";
+          timerEl.style.padding = "2px 6px";
+          timerEl.style.borderRadius = "4px";
+          timerEl.style.marginBottom = "2px";
+          wrapper.appendChild(timerEl);
+        }
         const el = document.createElement("div");
         el.style.width = `${TEAM_MARKER_SIZE_PX}px`;
         el.style.height = `${TEAM_MARKER_SIZE_PX}px`;
@@ -547,7 +570,6 @@ export function RaceMap({
         el.style.background = "transparent";
         el.style.border = "2px solid #fff";
         el.style.boxSizing = "border-box";
-        el.style.cursor = "pointer";
         const img = document.createElement("img");
         img.src = url;
         img.alt = t.name;
@@ -556,8 +578,68 @@ export function RaceMap({
         img.style.objectFit = "cover";
         img.style.display = "block";
         el.appendChild(img);
+        wrapper.appendChild(el);
         const teamId = t.teamId;
-        el.addEventListener("click", (ev) => {
+        const existing = teamMarkersRef.current.get(t.teamId);
+        if (existing) {
+          existing.setElement(wrapper);
+          existing.setLngLat([lng, lat]);
+          wrapper.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            const team = teamsRef.current.find((x) => x.teamId === teamId);
+            if (!team) return;
+            if (teamPopupRef.current) {
+              teamPopupRef.current.remove();
+              teamPopupRef.current = null;
+            }
+            if (teamPopupRootRef.current) {
+              teamPopupRootRef.current.unmount();
+              teamPopupRootRef.current = null;
+            }
+            const container = document.createElement("div");
+            const root = createRoot(container);
+            teamPopupRootRef.current = root;
+            const formatRemainingFn = (endsAt: string) => {
+              const end = new Date(endsAt).getTime();
+              const secs = Math.max(0, Math.floor((end - Date.now()) / 1000));
+              const m = Math.floor(secs / 60);
+              const s = secs % 60;
+              return `${m}:${s.toString().padStart(2, "0")}`;
+            };
+            root.render(
+              <TeamMarkerPopup
+                teamName={team.name}
+                totalDistanceKm={team.totalDistanceKm}
+                activePenalty={team.activePenalty}
+                formatRemaining={formatRemainingFn}
+                onVote={async () => voteHandlerRef.current?.(teamId)}
+                onBuyPunishment={() => {
+                  window.dispatchEvent(
+                    new CustomEvent(OPEN_PANEL_TAB, { detail: { tab: "punishments" as const } })
+                  );
+                  teamPopupRef.current?.remove();
+                  teamPopupRef.current = null;
+                }}
+              />
+            );
+            const popup = new mapboxgl.Popup({
+              closeButton: true,
+              closeOnClick: false,
+              className: "team-marker-popup",
+            })
+              .setLngLat([lng, lat])
+              .setDOMContent(container)
+              .addTo(map);
+            teamPopupRef.current = popup;
+            popup.on("close", () => {
+              root.unmount();
+              teamPopupRootRef.current = null;
+              teamPopupRef.current = null;
+            });
+          });
+          return;
+        }
+        wrapper.addEventListener("click", (ev) => {
           ev.stopPropagation();
           const team = teamsRef.current.find((x) => x.teamId === teamId);
           if (!team) return;
@@ -595,7 +677,11 @@ export function RaceMap({
               }}
             />
           );
-          const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: false })
+          const popup = new mapboxgl.Popup({
+            closeButton: true,
+            closeOnClick: false,
+            className: "team-marker-popup",
+          })
             .setLngLat([lng, lat])
             .setDOMContent(container)
             .addTo(map);
@@ -606,7 +692,7 @@ export function RaceMap({
             teamPopupRef.current = null;
           });
         });
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new mapboxgl.Marker({ element: wrapper })
           .setLngLat([lng, lat])
           .addTo(map);
         teamMarkersRef.current.set(t.teamId, marker);
@@ -675,15 +761,6 @@ export function RaceMap({
     );
   }
 
-  function formatRemaining(endsAt: string): string {
-    const end = new Date(endsAt).getTime();
-    const secs = Math.max(0, Math.floor((end - now.getTime()) / 1000));
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
-
-  // Only show teams with active pause timer – no "next/queued" on map
   const teamsWithPenalty = teams.filter((t) => t.activePenalty != null);
 
   // Distance between the two teams (when both have valid positions)
@@ -713,23 +790,6 @@ export function RaceMap({
             <span className="text-primary font-semibold">{distanceText}</span>
           </div>
         )}
-        {teamsWithPenalty.length > 0 && teamsWithPenalty.map((t) => (
-          <div
-            key={t.teamId}
-            className="flex items-center gap-1.5 rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur"
-          >
-            <span className="text-base" aria-hidden>❄️</span>
-            <span className="truncate">{t.name}:</span>
-            <span className="text-primary">
-              {t.activePenalty!.title}
-              {t.activePenalty!.endsAt ? (
-                <> ({formatRemaining(t.activePenalty!.endsAt)})</>
-              ) : (
-                " (aktiivne)"
-              )}
-            </span>
-          </div>
-        ))}
       </div>
       <p className="absolute bottom-2 left-2 right-2 rounded bg-background/80 px-2 py-1 text-center text-xs text-muted-foreground backdrop-blur">
         Täpid: viimane asukoht. Jooned: tee, kust meeskonnad on läbi käinud.

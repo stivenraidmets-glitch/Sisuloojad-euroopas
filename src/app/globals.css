@@ -103,6 +103,14 @@
   font: inherit;
 }
 
+/* Team marker popup: no Mapbox default frame */
+.team-marker-popup .mapboxgl-popup-content {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
 .team-marker {
   animation: pin-bounce 2s ease-in-out infinite;
 }
