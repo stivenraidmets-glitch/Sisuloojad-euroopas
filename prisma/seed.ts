@@ -15,8 +15,8 @@ async function main() {
   });
   await prisma.team.upsert({
     where: { id: 3 },
-    update: { name: "Team 3", color: "#22C55E" },
-    create: { id: 3, name: "Team 3", color: "#22C55E" },
+    update: { name: "Gepu ja Kris", color: "#22C55E" },
+    create: { id: 3, name: "Gepu ja Kris", color: "#22C55E" },
   });
 
   await prisma.penaltyOption.upsert({

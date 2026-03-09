@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 const DEFAULT_TEAMS = [
   { id: 1, name: "Kozip", color: "#3B82F6", imageUrl: "/team1.png" },
   { id: 2, name: "Stiven ja Sidni", color: "#EF4444", imageUrl: "/team2.png" },
-  { id: 3, name: "Team 3", color: "#22C55E", imageUrl: null },
+  { id: 3, name: "Gepu ja Kris", color: "#22C55E", imageUrl: null },
 ] as const;
 
 export async function ensureDefaultTeams() {
