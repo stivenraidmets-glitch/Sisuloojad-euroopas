@@ -37,6 +37,11 @@ const COUNTRIES_LAYER_ID = "country-unlocks-fill";
 const SPAIN_CODE = "ES"; // start of race; show half team 1 / half team 2
 const SPAIN_PATTERN_ID = "spain-start-pattern";
 const SPAIN_LAYER_ID = "spain-start-fill";
+const ESTONIA_CODE = "EE"; // grand finish – gold glow
+const ESTONIA_FILL_LAYER_ID = "estonia-finish-fill";
+const ESTONIA_GLOW_LAYER_ID = "estonia-finish-glow";
+const ESTONIA_GOLD = "#eab308";
+const ESTONIA_GLOW_COLOR = "#fde047";
 const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson";
 const COUNTRY_FILL_OPACITY = 0.35;
 export const OPEN_PANEL_TAB = "open-panel-tab" as const;
@@ -439,6 +444,7 @@ export function RaceMap({
       const matchExpr: unknown[] = ["match", codeGetter];
       Object.entries(countryColors).forEach(([code, color]) => {
         if (code === SPAIN_CODE) return; // Spain drawn separately as half team 1 / half team 2 (start)
+        if (code === ESTONIA_CODE) return; // Estonia drawn separately as gold finish
         matchExpr.push(code, color);
       });
       matchExpr.push("rgba(0,0,0,0)");
@@ -524,6 +530,44 @@ export function RaceMap({
           COUNTRIES_LAYER_ID
         );
       }
+
+      // Estonia = grand finish – gold fill + glowing overlay
+      const estoniaFilter: mapboxgl.Expression = [
+        "==",
+        ["upcase", ["coalesce", ["get", "ISO_A2_EH"], ["get", "iso_a2"], ["get", "ISO_A2"]]],
+        ESTONIA_CODE,
+      ];
+      if (!map.getLayer(ESTONIA_FILL_LAYER_ID)) {
+        map.addLayer(
+          {
+            id: ESTONIA_FILL_LAYER_ID,
+            type: "fill",
+            source: COUNTRIES_SOURCE_ID,
+            filter: estoniaFilter,
+            paint: {
+              "fill-color": ESTONIA_GOLD,
+              "fill-opacity": 0.75,
+              "fill-outline-color": "#fde047",
+            },
+          },
+          SPAIN_LAYER_ID
+        );
+      }
+      if (!map.getLayer(ESTONIA_GLOW_LAYER_ID)) {
+        map.addLayer(
+          {
+            id: ESTONIA_GLOW_LAYER_ID,
+            type: "fill",
+            source: COUNTRIES_SOURCE_ID,
+            filter: estoniaFilter,
+            paint: {
+              "fill-color": ESTONIA_GLOW_COLOR,
+              "fill-opacity": 0.35,
+            },
+          },
+          ESTONIA_FILL_LAYER_ID
+        );
+      }
     };
 
     if (map.isStyleLoaded()) {
@@ -532,6 +576,29 @@ export function RaceMap({
       map.once("load", applyCountriesLayer);
     }
   }, [countriesGeoJson, countryColors, teams]);
+
+  // Animate Estonia glow (grand finish)
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    let rafId: number;
+    const start = Date.now();
+    const periodMs = 2200;
+    const minOpacity = 0.2;
+    const maxOpacity = 0.65;
+
+    const tick = () => {
+      const layer = map.getLayer(ESTONIA_GLOW_LAYER_ID);
+      if (layer) {
+        const t = (Date.now() - start) / periodMs;
+        const opacity = minOpacity + (maxOpacity - minOpacity) * (0.5 + 0.5 * Math.sin(t * Math.PI * 2));
+        map.setPaintProperty(ESTONIA_GLOW_LAYER_ID, "fill-opacity", opacity);
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   // Start at default Europe zoom; no auto-fit to teams so the map always opens at this height
   // (Users can pan/zoom to teams; initial view stays consistent.)
