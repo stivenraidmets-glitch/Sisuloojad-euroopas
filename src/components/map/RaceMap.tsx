@@ -35,9 +35,11 @@ const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
-const SPAIN_CODE = "ES"; // start of race; show all team colors as stripes
+const SPAIN_CODE = "ES"; // start of race; static 3 equal stripes (team 1, 2, 3)
 const SPAIN_PATTERN_ID = "spain-start-pattern";
 const SPAIN_LAYER_ID = "spain-start-fill";
+// Static colors for Spain: Team 1 blue, Team 2 red, Team 3 green (equal-width stripes)
+const SPAIN_STRIPE_COLORS = ["#3B82F6", "#EF4444", "#22C55E"] as const;
 const ESTONIA_CODE = "EE"; // grand finish – gold glow
 const ESTONIA_FILL_LAYER_ID = "estonia-finish-fill";
 const ESTONIA_GLOW_LAYER_ID = "estonia-finish-glow";
@@ -445,7 +447,7 @@ export function RaceMap({
       ];
       const matchExpr: unknown[] = ["match", codeGetter];
       Object.entries(countryColors).forEach(([code, color]) => {
-        if (code === SPAIN_CODE) return; // Spain drawn separately as half team 1 / half team 2 (start)
+        if (code === SPAIN_CODE) return; // Spain drawn separately as static 3-team stripes (start)
         if (code === ESTONIA_CODE) return; // Estonia drawn separately as gold finish
         matchExpr.push(code, color);
       });
@@ -489,17 +491,17 @@ export function RaceMap({
         );
       }
 
-      // Spain = start; fill with stripes for all teams
-      const stripeColors = teams.map((team) => team.color).filter(Boolean);
-      const size = 32;
+      // Spain = start; static 3 equal vertical stripes (team 1, 2, 3 colors)
+      const size = 33; // divisible by 3 for equal stripes
+      const stripeCount = SPAIN_STRIPE_COLORS.length;
+      const stripeWidth = size / stripeCount;
       const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
       if (canvas) {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext("2d");
-        if (ctx && stripeColors.length > 0) {
-          const stripeWidth = size / stripeColors.length;
-          stripeColors.forEach((color, index) => {
+        if (ctx) {
+          SPAIN_STRIPE_COLORS.forEach((color, index) => {
             ctx.fillStyle = color;
             ctx.fillRect(index * stripeWidth, 0, stripeWidth, size);
           });
