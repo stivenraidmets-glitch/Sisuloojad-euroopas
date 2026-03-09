@@ -10,6 +10,9 @@ import { haversineDistanceKm } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TeamMarkerPopup } from "./TeamMarkerPopup";
 import { EventTimer } from "@/components/event/EventTimer";
+import bbox from "@turf/bbox";
+import bboxClip from "@turf/bbox-clip";
+import type { FeatureCollection, Polygon, MultiPolygon } from "geojson";
 
 const MAP_CENTER: [number, number] = [15.5, 52]; // fallback Europe
 const MAP_ZOOM = 4; // default zoom (Europe regional); map starts at this height
@@ -36,7 +39,7 @@ const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
 const SPAIN_CODE = "ES"; // start of race; static 3 equal stripes (team 1, 2, 3)
-const SPAIN_PATTERN_ID = "spain-start-pattern";
+const SPAIN_STRIPES_SOURCE_ID = "spain-stripes";
 const SPAIN_LAYER_ID = "spain-start-fill";
 // Static colors for Spain: Team 1 blue, Team 2 red, Team 3 green (equal-width stripes)
 const SPAIN_STRIPE_COLORS = ["#3B82F6", "#EF4444", "#22C55E"] as const;
@@ -48,6 +51,51 @@ const ESTONIA_GLOW_COLOR = "#fde047";
 const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson";
 const COUNTRY_FILL_OPACITY = 0.35;
 export const OPEN_PANEL_TAB = "open-panel-tab" as const;
+
+function getCountryCode(f: GeoJSON.Feature): string | null {
+  const p = f.properties;
+  if (!p) return null;
+  const code =
+    (p as Record<string, unknown>).ISO_A2_EH ??
+    (p as Record<string, unknown>).iso_a2 ??
+    (p as Record<string, unknown>).ISO_A2;
+  return typeof code === "string" ? code.toUpperCase() : null;
+}
+
+function buildSpainStripesGeoJson(
+  countries: GeoJSON.FeatureCollection | null
+): FeatureCollection<Polygon | MultiPolygon> | null {
+  if (!countries?.features?.length) return null;
+  const spainFeature = countries.features.find(
+    (f) => getCountryCode(f) === SPAIN_CODE
+  ) as GeoJSON.Feature<Polygon | MultiPolygon> | undefined;
+  if (!spainFeature?.geometry) return null;
+  try {
+    const [minLng, minLat, maxLng, maxLat] = bbox(spainFeature);
+    const w = maxLng - minLng;
+    const features: GeoJSON.Feature<Polygon | MultiPolygon>[] = [];
+    for (let i = 0; i < 3; i++) {
+      const clipBbox: [number, number, number, number] = [
+        minLng + (i * w) / 3,
+        minLat,
+        minLng + ((i + 1) * w) / 3,
+        maxLat,
+      ];
+      const clipped = bboxClip(spainFeature, clipBbox);
+      if (clipped.geometry && (clipped.geometry.type === "Polygon" || clipped.geometry.type === "MultiPolygon")) {
+        features.push({
+          ...clipped,
+          properties: { ...clipped.properties, stripeIndex: i },
+          geometry: clipped.geometry,
+        } as GeoJSON.Feature<Polygon | MultiPolygon>);
+      }
+    }
+    if (features.length === 0) return null;
+    return { type: "FeatureCollection", features };
+  } catch {
+    return null;
+  }
+}
 
 // Default positions when no location has been broadcast yet.
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
@@ -175,6 +223,10 @@ export function RaceMap({
   const [trails, setTrails] = useState<Record<number, { color: string; coordinates: [number, number][] }>>({});
   const [countryUnlocks, setCountryUnlocks] = useState<Record<string, number>>({});
   const [countriesGeoJson, setCountriesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
+  const spainStripesGeoJson = useMemo(
+    () => buildSpainStripesGeoJson(countriesGeoJson),
+    [countriesGeoJson]
+  );
 
   const fetchTrails = useCallback(async () => {
     try {
@@ -491,46 +543,45 @@ export function RaceMap({
         );
       }
 
-      // Spain = start; static 3 equal vertical stripes (team 1, 2, 3 colors)
-      const size = 33; // divisible by 3 for equal stripes
-      const stripeCount = SPAIN_STRIPE_COLORS.length;
-      const stripeWidth = size / stripeCount;
-      const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
-      if (canvas) {
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          SPAIN_STRIPE_COLORS.forEach((color, index) => {
-            ctx.fillStyle = color;
-            ctx.fillRect(index * stripeWidth, 0, stripeWidth, size);
+      // Spain = start; 3 equal vertical bands (clipped by longitude), not a tiled pattern
+      if (spainStripesGeoJson) {
+        if (!map.getSource(SPAIN_STRIPES_SOURCE_ID)) {
+          map.addSource(SPAIN_STRIPES_SOURCE_ID, {
+            type: "geojson",
+            data: spainStripesGeoJson,
           });
-          const imageData = ctx.getImageData(0, 0, size, size);
-          if (map.hasImage(SPAIN_PATTERN_ID)) map.removeImage(SPAIN_PATTERN_ID);
-          map.addImage(SPAIN_PATTERN_ID, imageData, { width: size, height: size });
+        } else {
+          (map.getSource(SPAIN_STRIPES_SOURCE_ID) as mapboxgl.GeoJSONSource).setData(
+            spainStripesGeoJson
+          );
         }
-      }
-      const spainFilter: mapboxgl.Expression = [
-        "==",
-        ["upcase", ["coalesce", ["get", "ISO_A2_EH"], ["get", "iso_a2"], ["get", "ISO_A2"]]],
-        SPAIN_CODE,
-      ];
-      if (map.getLayer(SPAIN_LAYER_ID)) {
-        map.setPaintProperty(SPAIN_LAYER_ID, "fill-opacity", COUNTRY_FILL_OPACITY);
-      } else {
-        map.addLayer(
-          {
-            id: SPAIN_LAYER_ID,
-            type: "fill",
-            source: COUNTRIES_SOURCE_ID,
-            filter: spainFilter,
-            paint: {
-              "fill-pattern": SPAIN_PATTERN_ID,
-              "fill-opacity": COUNTRY_FILL_OPACITY,
+        if (!map.getLayer(SPAIN_LAYER_ID)) {
+          map.addLayer(
+            {
+              id: SPAIN_LAYER_ID,
+              type: "fill",
+              source: SPAIN_STRIPES_SOURCE_ID,
+              paint: {
+                "fill-color": [
+                  "match",
+                  ["get", "stripeIndex"],
+                  0,
+                  SPAIN_STRIPE_COLORS[0],
+                  1,
+                  SPAIN_STRIPE_COLORS[1],
+                  2,
+                  SPAIN_STRIPE_COLORS[2],
+                  "rgba(0,0,0,0)",
+                ],
+                "fill-opacity": COUNTRY_FILL_OPACITY,
+                "fill-outline-color": "rgba(255,255,255,0.3)",
+              },
             },
-          },
-          COUNTRIES_LAYER_ID
-        );
+            COUNTRIES_LAYER_ID
+          );
+        } else {
+          map.setPaintProperty(SPAIN_LAYER_ID, "fill-opacity", COUNTRY_FILL_OPACITY);
+        }
       }
 
       // Estonia = grand finish – gold fill + glowing overlay
@@ -577,7 +628,7 @@ export function RaceMap({
     } else {
       map.once("load", applyCountriesLayer);
     }
-  }, [countriesGeoJson, countryColors, teams]);
+  }, [countriesGeoJson, countryColors, teams, spainStripesGeoJson]);
 
   // Animate Estonia glow (grand finish)
   useEffect(() => {
