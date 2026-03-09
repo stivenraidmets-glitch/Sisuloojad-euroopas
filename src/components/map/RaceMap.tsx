@@ -41,6 +41,7 @@ const COUNTRIES_LAYER_ID = "country-unlocks-fill";
 const SPAIN_CODE = "ES"; // start of race; static 3 equal stripes (team 1, 2, 3)
 const SPAIN_STRIPES_SOURCE_ID = "spain-stripes";
 const SPAIN_LAYER_ID = "spain-start-fill";
+const SPAIN_PATTERN_ID = "spain-start-pattern"; // fallback when clipped GeoJSON unavailable
 // Static colors for Spain: Team 1 blue, Team 2 red, Team 3 green (equal-width stripes)
 const SPAIN_STRIPE_COLORS = ["#3B82F6", "#EF4444", "#22C55E"] as const;
 const ESTONIA_CODE = "EE"; // grand finish – gold glow
@@ -67,7 +68,9 @@ function isSpainFeature(f: GeoJSON.Feature): boolean {
   const p = f.properties as Record<string, unknown> | undefined;
   if (!p) return false;
   const adm = (p.ADM0_A3 ?? p.SOV_A3 ?? "") as string;
-  return adm.toUpperCase() === "ESP";
+  if (adm.toUpperCase() === "ESP") return true;
+  const name = (p.NAME ?? p.ADMIN ?? p.SOVEREIGNT ?? "") as string;
+  return typeof name === "string" && name.toUpperCase().includes("SPAIN");
 }
 
 function buildSpainStripesGeoJson(
@@ -551,8 +554,15 @@ export function RaceMap({
         );
       }
 
-      // Spain = start; 3 equal vertical bands (clipped by longitude), not a tiled pattern
+      // Spain = neutral start; always show 3 team colors (clipped bands or pattern fallback)
+      const spainFilter: mapboxgl.Expression = [
+        "any",
+        ["==", ["upcase", ["coalesce", ["get", "ISO_A2_EH"], ["get", "iso_a2"], ["get", "ISO_A2"]]], SPAIN_CODE],
+        ["==", ["upcase", ["coalesce", ["get", "ADM0_A3"], ["get", "SOV_A3"]]], "ESP"],
+      ];
+
       if (spainStripesGeoJson) {
+        if (map.getLayer(SPAIN_LAYER_ID)) map.removeLayer(SPAIN_LAYER_ID);
         if (!map.getSource(SPAIN_STRIPES_SOURCE_ID)) {
           map.addSource(SPAIN_STRIPES_SOURCE_ID, {
             type: "geojson",
@@ -563,33 +573,64 @@ export function RaceMap({
             spainStripesGeoJson
           );
         }
-        if (!map.getLayer(SPAIN_LAYER_ID)) {
-          map.addLayer(
-            {
-              id: SPAIN_LAYER_ID,
-              type: "fill",
-              source: SPAIN_STRIPES_SOURCE_ID,
-              paint: {
-                "fill-color": [
-                  "match",
-                  ["get", "stripeIndex"],
-                  0,
-                  SPAIN_STRIPE_COLORS[0],
-                  1,
-                  SPAIN_STRIPE_COLORS[1],
-                  2,
-                  SPAIN_STRIPE_COLORS[2],
-                  "rgba(0,0,0,0)",
-                ],
-                "fill-opacity": COUNTRY_FILL_OPACITY,
-                "fill-outline-color": "rgba(255,255,255,0.3)",
-              },
+        map.addLayer(
+          {
+            id: SPAIN_LAYER_ID,
+            type: "fill",
+            source: SPAIN_STRIPES_SOURCE_ID,
+            paint: {
+              "fill-color": [
+                "match",
+                ["get", "stripeIndex"],
+                0,
+                SPAIN_STRIPE_COLORS[0],
+                1,
+                SPAIN_STRIPE_COLORS[1],
+                2,
+                SPAIN_STRIPE_COLORS[2],
+                "rgba(0,0,0,0)",
+              ],
+              "fill-opacity": COUNTRY_FILL_OPACITY,
+              "fill-outline-color": "rgba(255,255,255,0.3)",
             },
-            COUNTRIES_LAYER_ID
-          );
-        } else {
-          map.setPaintProperty(SPAIN_LAYER_ID, "fill-opacity", COUNTRY_FILL_OPACITY);
+          },
+          COUNTRIES_LAYER_ID
+        );
+      } else if (countriesGeoJson) {
+        if (map.getLayer(SPAIN_LAYER_ID)) map.removeLayer(SPAIN_LAYER_ID);
+        if (map.getSource(SPAIN_STRIPES_SOURCE_ID)) {
+          map.removeSource(SPAIN_STRIPES_SOURCE_ID);
         }
+        const size = 33;
+        const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+        if (canvas) {
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            const stripeWidth = size / 3;
+            SPAIN_STRIPE_COLORS.forEach((color, i) => {
+              ctx.fillStyle = color;
+              ctx.fillRect(i * stripeWidth, 0, stripeWidth, size);
+            });
+            const imageData = ctx.getImageData(0, 0, size, size);
+            if (map.hasImage(SPAIN_PATTERN_ID)) map.removeImage(SPAIN_PATTERN_ID);
+            map.addImage(SPAIN_PATTERN_ID, imageData, { width: size, height: size });
+          }
+        }
+        map.addLayer(
+          {
+            id: SPAIN_LAYER_ID,
+            type: "fill",
+            source: COUNTRIES_SOURCE_ID,
+            filter: spainFilter,
+            paint: {
+              "fill-pattern": SPAIN_PATTERN_ID,
+              "fill-opacity": COUNTRY_FILL_OPACITY,
+            },
+          },
+          COUNTRIES_LAYER_ID
+        );
       }
 
       // Estonia = grand finish – gold fill + glowing overlay
