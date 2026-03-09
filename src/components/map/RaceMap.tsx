@@ -11,11 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { TeamMarkerPopup } from "./TeamMarkerPopup";
 
 const MAP_CENTER: [number, number] = [15.5, 52]; // fallback Europe
-const MAP_ZOOM = 4;
+const MAP_ZOOM = 4; // default zoom (Europe regional); map starts at this height
 const MAP_STYLE = "mapbox://styles/mapbox/dark-v11";
-const FIT_PADDING = 100; // px around team positions so other countries stay visible
-const FIT_MAX_ZOOM = 6;  // don't zoom in past this (higher = more zoom)
-const SINGLE_POINT_ZOOM = 5; // zoom when only one team has location
 const TEAMS_SOURCE_ID = "teams-points";
 const TEAMS_LAYER_ID = "teams-circles";
 const TEAM_MARKER_SIZE_PX = 40; // size of profile image markers (HTML markers for correct PNG transparency)
@@ -111,7 +108,6 @@ export function RaceMap({
 }: RaceMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<mapboxgl.Map | null>(null);
-  const hasFittedBounds = useRef(false);
   const teamMarkersRef = useRef<Map<number, mapboxgl.Marker>>(new Map());
   const teamPopupRef = useRef<mapboxgl.Popup | null>(null);
   const teamPopupRootRef = useRef<Root | null>(null);
@@ -537,38 +533,8 @@ export function RaceMap({
     }
   }, [countriesGeoJson, countryColors, teams]);
 
-  // Fit map to team positions once (so view is centered on live locations, zoomed in enough to see them)
-  useEffect(() => {
-    const map = mapInstance.current;
-    if (!map || hasFittedBounds.current) return;
-
-    const valid = teams.filter(
-      (t) =>
-        typeof t.lat === "number" &&
-        typeof t.lng === "number" &&
-        t.lat >= -90 &&
-        t.lat <= 90 &&
-        t.lng >= -180 &&
-        t.lng <= 180 &&
-        !(t.lat === 0 && t.lng === 0)
-    );
-    if (valid.length === 0) return;
-
-    const doFit = () => {
-      if (valid.length === 1) {
-        map.setCenter([valid[0].lng, valid[0].lat]);
-        map.setZoom(SINGLE_POINT_ZOOM);
-      } else {
-        const bounds = new mapboxgl.LngLatBounds();
-        valid.forEach((t) => bounds.extend([t.lng, t.lat]));
-        map.fitBounds(bounds, { padding: FIT_PADDING, maxZoom: FIT_MAX_ZOOM, duration: 0 });
-      }
-      hasFittedBounds.current = true;
-    };
-
-    if (map.isStyleLoaded()) doFit();
-    else map.once("load", doFit);
-  }, [teams]);
+  // Start at default Europe zoom; no auto-fit to teams so the map always opens at this height
+  // (Users can pan/zoom to teams; initial view stays consistent.)
 
   // Draw team positions as map layers – frozen teams get ice-blue circle
   useEffect(() => {
