@@ -435,17 +435,15 @@ export function RaceMap({
         );
       }
 
-      // Support both iso_a2 and ISO_A2 (Natural Earth 50m uses ISO_A2)
-      const matchExpr: unknown[] = [
-        "match",
-        ["upcase", ["coalesce", ["get", "iso_a2"], ["get", "ISO_A2"]]],
+      // Prefer ISO_A2_EH (correct codes for -99 countries e.g. France), then iso_a2, then ISO_A2
+      const codeGetter: mapboxgl.Expression = [
+        "upcase",
+        ["coalesce", ["get", "ISO_A2_EH"], ["get", "iso_a2"], ["get", "ISO_A2"]],
       ];
-      // Natural Earth 50m uses "-99" for France instead of "FR"; map both so FR assignment works
-      const FR_NATURAL_EARTH_ALIAS = "-99";
+      const matchExpr: unknown[] = ["match", codeGetter];
       Object.entries(countryColors).forEach(([code, color]) => {
         if (code === SPAIN_CODE) return; // Spain drawn separately as half team 1 / half team 2 (start)
         matchExpr.push(code, color);
-        if (code === "FR") matchExpr.push(FR_NATURAL_EARTH_ALIAS, color);
       });
       matchExpr.push("rgba(0,0,0,0)");
 
@@ -510,7 +508,7 @@ export function RaceMap({
       }
       const spainFilter: mapboxgl.Expression = [
         "==",
-        ["upcase", ["coalesce", ["get", "iso_a2"], ["get", "ISO_A2"]]],
+        ["upcase", ["coalesce", ["get", "ISO_A2_EH"], ["get", "iso_a2"], ["get", "ISO_A2"]]],
         SPAIN_CODE,
       ];
       if (map.getLayer(SPAIN_LAYER_ID)) {
