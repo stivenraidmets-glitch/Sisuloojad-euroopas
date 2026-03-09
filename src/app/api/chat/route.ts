@@ -6,7 +6,7 @@ import { getOrCreateSystemUser } from "@/lib/chat-notify";
 
 export const dynamic = "force-dynamic";
 
-const MAX_BODY_LENGTH = 500;
+const MAX_BODY_LENGTH = 800; // allow long GIF URLs (Giphy, Tenor, etc.)
 const MAX_MESSAGES = 100;
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")

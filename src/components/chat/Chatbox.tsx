@@ -6,6 +6,30 @@ import { Send, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+const GIF_URL_HOSTS = [
+  "giphy.com",
+  "media.giphy.com",
+  "i.giphy.com",
+  "imgur.com",
+  "i.imgur.com",
+  "media.tenor.com",
+  "tenor.com",
+];
+function isGifUrl(body: string): boolean {
+  const s = body.trim();
+  if (!s || s.length > 800) return false;
+  try {
+    const url = new URL(s);
+    if (url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (GIF_URL_HOSTS.some((h) => host === h || host.endsWith("." + h))) return true;
+    if (url.pathname.toLowerCase().endsWith(".gif")) return true;
+  } catch {
+    return false;
+  }
+  return false;
+}
+
 type ChatMessage = {
   id: string;
   body: string;
@@ -103,7 +127,25 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
                   minute: "2-digit",
                 })}
               </span>
-              <p className="mt-0.5 break-words">{m.body}</p>
+              <div className="mt-0.5">
+                {isGifUrl(m.body) ? (
+                  <a
+                    href={m.body.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block max-w-full overflow-hidden rounded"
+                  >
+                    <img
+                      src={m.body.trim()}
+                      alt="GIF"
+                      className="max-h-48 max-w-full rounded object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                ) : (
+                  <p className="break-words">{m.body}</p>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -111,8 +153,8 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Sõnum..."
-            maxLength={500}
+            placeholder="Sõnum või GIF link..."
+            maxLength={800}
             className="flex-1 text-sm"
             disabled={sending}
           />
