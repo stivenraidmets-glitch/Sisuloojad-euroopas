@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import { prisma } from "@/lib/db";
 import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
+import { ensureDefaultTeams } from "@/lib/default-teams";
 import { RaceMap } from "@/components/map/RaceMap";
 import { RightPanel } from "@/components/layout/RightPanel";
 
 export const dynamic = "force-dynamic";
 
 async function getTeams() {
+  await ensureDefaultTeams();
   const teams = await prisma.team.findMany({
     orderBy: { id: "asc" },
     select: {
@@ -67,10 +69,11 @@ export default async function HomePage() {
     );
   }
 
-  const team1 = teams[0];
-  const team2 = teams[1];
-  const team1Name = team1?.name ?? "Kozip";
-  const team2Name = team2?.name ?? "Stiven ja Sidni";
+  const panelTeams = teams.map((team) => ({
+    id: team.id,
+    name: team.name,
+    color: team.color,
+  }));
 
   const recentPenaltiesForPanel = recentPenalties.map((p) => ({
     id: p.id,
@@ -94,8 +97,7 @@ export default async function HomePage() {
         </section>
       </main>
       <RightPanel
-        team1Name={team1Name}
-        team2Name={team2Name}
+        teams={panelTeams}
         recentPenalties={recentPenaltiesForPanel}
       />
     </>

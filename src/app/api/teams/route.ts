@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ensureDefaultTeams } from "@/lib/default-teams";
 import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    await ensureDefaultTeams();
     const teams = await prisma.team.findMany({
       orderBy: { id: "asc" },
       select: {

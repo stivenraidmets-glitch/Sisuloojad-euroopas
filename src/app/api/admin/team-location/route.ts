@@ -21,7 +21,14 @@ export async function POST(req: Request) {
   const lat = Number(body.lat);
   const lng = Number(body.lng);
 
-  if (teamId !== 1 && teamId !== 2) {
+  if (!Number.isInteger(teamId) || teamId <= 0) {
+    return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
+  }
+  const teamExists = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { id: true },
+  });
+  if (!teamExists) {
     return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
   }
   if (Number.isNaN(lat) || lat < -90 || lat > 90 || Number.isNaN(lng) || lng < -180 || lng > 180) {

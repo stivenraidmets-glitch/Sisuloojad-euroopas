@@ -2,23 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 
-type VoteCounts = { team1: number; team2: number; total: number };
+type TeamOption = { id: number; name: string; color: string };
+type VoteCounts = { countsByTeam: Record<number, number>; total: number };
 
 export function VoteModule({
-  team1Name,
-  team2Name,
+  teams,
 }: {
-  team1Name: string;
-  team2Name: string;
+  teams: TeamOption[];
 }) {
   const { data: session, status } = useSession();
-  const [counts, setCounts] = useState<VoteCounts>({ team1: 0, team2: 0, total: 0 });
+  const [counts, setCounts] = useState<VoteCounts>({ countsByTeam: {}, total: 0 });
   const [voting, setVoting] = useState(false);
   const { toast } = useToast();
 
@@ -27,7 +24,7 @@ export function VoteModule({
       const res = await fetch("/api/vote");
       if (res.ok) {
         const data = await res.json();
-        setCounts({ team1: data.team1, team2: data.team2, total: data.total });
+        setCounts({ countsByTeam: data.countsByTeam ?? {}, total: data.total ?? 0 });
       }
     } catch (_) {}
   };
@@ -62,7 +59,7 @@ export function VoteModule({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to vote");
-      setCounts({ team1: data.team1, team2: data.team2, total: data.total });
+      setCounts({ countsByTeam: data.countsByTeam ?? {}, total: data.total ?? 0 });
       toast({ title: "Hääl salvestatud!" });
     } catch (e) {
       toast({
@@ -73,9 +70,6 @@ export function VoteModule({
       setVoting(false);
     }
   };
-
-  const p1 = counts.total ? (counts.team1 / counts.total) * 100 : 50;
-  const p2 = counts.total ? (counts.team2 / counts.total) * 100 : 50;
 
   return (
     <Card>
@@ -88,43 +82,38 @@ export function VoteModule({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            disabled={voting || status !== "authenticated"}
-            onClick={() => vote(1)}
-          >
-            {team1Name}
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            disabled={voting || status !== "authenticated"}
-            onClick={() => vote(2)}
-          >
-            {team2Name}
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {teams.map((team) => (
+            <Button
+              key={team.id}
+              variant="outline"
+              className="flex-1"
+              disabled={voting || status !== "authenticated"}
+              onClick={() => vote(team.id)}
+            >
+              {team.name}
+            </Button>
+          ))}
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>{team1Name}: {counts.team1}</span>
-            <span>{team2Name}: {counts.team2}</span>
-          </div>
-          <div className="flex gap-0.5">
-            <motion.div
-              className="h-3 rounded-l-full bg-blue-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${p1}%` }}
-              transition={{ duration: 0.5 }}
-            />
-            <motion.div
-              className="h-3 rounded-r-full bg-red-500"
-              initial={{ width: 0 }}
-              animate={{ width: `${p2}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
+          {teams.map((team) => {
+            const count = counts.countsByTeam[team.id] ?? 0;
+            const percent = counts.total ? (count / counts.total) * 100 : 0;
+            return (
+              <div key={team.id} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>{team.name}: {count}</span>
+                  <span className="text-muted-foreground">{percent.toFixed(0)}%</span>
+                </div>
+                <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full transition-all"
+                    style={{ width: `${percent}%`, backgroundColor: team.color }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

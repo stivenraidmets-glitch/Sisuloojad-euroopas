@@ -3,12 +3,12 @@ import { z } from "zod";
 export const broadcastBodySchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  teamId: z.number().int().min(1).max(2),
+  teamId: z.number().int().positive(),
   secret: z.string().min(1),
 });
 
 export const voteBodySchema = z.object({
-  teamId: z.number().int().min(1).max(2),
+  teamId: z.number().int().positive(),
 });
 
 export const wheelSpinSchema = z.object({});

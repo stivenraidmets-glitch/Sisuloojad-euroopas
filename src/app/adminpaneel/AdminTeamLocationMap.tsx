@@ -12,12 +12,15 @@ const MAP_ZOOM = 4;
 const MARKER_SIZE_PX = 36;
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
   1: [-3.7038, 40.4168], // Madrid, Spain (start)
-  2: [24.7536, 59.437],  // Tallinn
+  2: [-0.8891, 41.6488], // Zaragoza, Spain
+  3: [-0.3763, 39.4699], // Valencia, Spain
 };
 
 function getTeamImageUrl(teamId: number, imageUrl?: string | null): string {
   if (imageUrl) return imageUrl;
-  return teamId === 1 ? "/team1.png" : "/team2.png";
+  if (teamId === 1) return "/team1.png";
+  if (teamId === 2) return "/team2.png";
+  return "";
 }
 
 export type TeamForLocation = {
@@ -131,13 +134,25 @@ export function TeamLocationMapWithControls({ teams }: { teams: TeamForLocation[
         el.style.border = "2px solid #fff";
         el.style.background = "transparent";
         el.style.cursor = "grab";
-        const img = document.createElement("img");
-        img.src = getTeamImageUrl(t.id, t.imageUrl);
-        img.alt = t.name;
-        img.style.width = "100%";
-        img.style.height = "100%";
-        img.style.objectFit = "cover";
-        el.appendChild(img);
+        const imageUrl = getTeamImageUrl(t.id, t.imageUrl);
+        if (imageUrl) {
+          const img = document.createElement("img");
+          img.src = imageUrl;
+          img.alt = t.name;
+          img.style.width = "100%";
+          img.style.height = "100%";
+          img.style.objectFit = "cover";
+          el.appendChild(img);
+        } else {
+          el.style.display = "flex";
+          el.style.alignItems = "center";
+          el.style.justifyContent = "center";
+          el.style.background = t.color;
+          el.style.color = "#fff";
+          el.style.fontSize = "12px";
+          el.style.fontWeight = "700";
+          el.textContent = String(t.id);
+        }
 
         const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat([pos.lng, pos.lat])

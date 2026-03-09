@@ -18,9 +18,9 @@ export async function POST(req: Request) {
     const penaltyOptionId = typeof body.penaltyOptionId === "string" ? body.penaltyOptionId : "";
     const teamId = typeof body.teamId === "number" ? body.teamId : parseInt(body.teamId, 10);
 
-    if (!penaltyOptionId || !teamId || (teamId !== 1 && teamId !== 2)) {
+    if (!penaltyOptionId || !Number.isInteger(teamId) || teamId <= 0) {
       return NextResponse.json(
-        { error: "penaltyOptionId and teamId (1 or 2) required" },
+        { error: "penaltyOptionId and teamId required" },
         { status: 400 }
       );
     }
@@ -52,11 +52,18 @@ export async function POST(req: Request) {
     const option = await prisma.penaltyOption.findUnique({
       where: { id: penaltyOptionId },
     });
+    const teamExists = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { id: true },
+    });
     if (!option) {
       return NextResponse.json(
         { error: "Karistuse valik ei leitud." },
         { status: 404 }
       );
+    }
+    if (!teamExists) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
     const purchase = await prisma.purchase.create({

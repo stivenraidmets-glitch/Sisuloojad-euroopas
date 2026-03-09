@@ -17,7 +17,14 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const teamId = parseInt(body.teamId, 10);
-  if (teamId !== 1 && teamId !== 2) {
+  if (!Number.isInteger(teamId) || teamId <= 0) {
+    return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
+  }
+  const teamExists = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { id: true },
+  });
+  if (!teamExists) {
     return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
   }
 

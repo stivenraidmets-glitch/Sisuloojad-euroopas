@@ -13,6 +13,11 @@ async function main() {
     update: { name: "Stiven ja Sidni", color: "#EF4444", imageUrl: "/team2.png" },
     create: { id: 2, name: "Stiven ja Sidni", color: "#EF4444", imageUrl: "/team2.png" },
   });
+  await prisma.team.upsert({
+    where: { id: 3 },
+    update: { name: "Team 3", color: "#22C55E" },
+    create: { id: 3, name: "Team 3", color: "#22C55E" },
+  });
 
   await prisma.penaltyOption.upsert({
     where: { id: "timeout-30sec" },
@@ -103,7 +108,7 @@ async function main() {
     data: { freePenaltyBalance: 50 },
   });
 
-  console.log("Seed completed: teams, penalty options, race status, wheel config, system user, Estonia (EE) = Team 1.");
+  console.log("Seed completed: 3 teams, penalty options, race status, wheel config, system user, Estonia (EE) = Team 1.");
 }
 
 main()

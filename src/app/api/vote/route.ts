@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ensureDefaultTeams } from "@/lib/default-teams";
 import { voteBodySchema } from "@/lib/validation";
 import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_VOTES } from "@/lib/pusher";
 
 export async function POST(req: Request) {
   try {
+    await ensureDefaultTeams();
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,6 +27,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    const team = await prisma.team.findUnique({
+      where: { id: parsed.data.teamId },
+      select: { id: true },
+    });
+    if (!team) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+    }
+
     await prisma.vote.upsert({
       where: { userId: user.id },
       update: { teamId: parsed.data.teamId },
@@ -39,18 +49,18 @@ export async function POST(req: Request) {
       _count: { teamId: true },
     });
     const total = counts.reduce((s, c) => s + c._count.teamId, 0);
-    const team1 = counts.find((c) => c.teamId === 1)?._count.teamId ?? 0;
-    const team2 = counts.find((c) => c.teamId === 2)?._count.teamId ?? 0;
+    const countsByTeam = Object.fromEntries(
+      counts.map((c) => [c.teamId, c._count.teamId])
+    );
 
     if (process.env.PUSHER_APP_ID) {
       await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_VOTES, {
-        team1,
-        team2,
+        countsByTeam,
         total,
       });
     }
 
-    return NextResponse.json({ success: true, team1, team2, total });
+    return NextResponse.json({ success: true, countsByTeam, total });
   } catch (e) {
     console.error("Vote error:", e);
     return NextResponse.json(
@@ -62,14 +72,16 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    await ensureDefaultTeams();
     const counts = await prisma.vote.groupBy({
       by: ["teamId"],
       _count: { teamId: true },
     });
     const total = counts.reduce((s, c) => s + c._count.teamId, 0);
-    const team1 = counts.find((c) => c.teamId === 1)?._count.teamId ?? 0;
-    const team2 = counts.find((c) => c.teamId === 2)?._count.teamId ?? 0;
-    return NextResponse.json({ team1, team2, total });
+    const countsByTeam = Object.fromEntries(
+      counts.map((c) => [c.teamId, c._count.teamId])
+    );
+    return NextResponse.json({ countsByTeam, total });
   } catch (e) {
     console.error("Vote count error:", e);
     return NextResponse.json(

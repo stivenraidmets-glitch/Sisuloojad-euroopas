@@ -19,16 +19,14 @@ type PenaltyOption = {
 };
 
 type PenaltyShopProps = {
-  team1Name: string;
-  team2Name: string;
+  teams: { id: number; name: string; color?: string }[];
   /** On team page: only show options to buy for this team */
   fixedTeamId?: number;
   fixedTeamName?: string;
 };
 
 export function PenaltyShop({
-  team1Name,
-  team2Name,
+  teams,
   fixedTeamId,
   fixedTeamName,
 }: PenaltyShopProps) {
@@ -43,7 +41,7 @@ export function PenaltyShop({
     freePenaltyBalance?: number;
   } | null>(null);
   const [redeemOptionId, setRedeemOptionId] = useState("");
-  const [redeemTeamId, setRedeemTeamId] = useState<number>(fixedTeamId ?? 1);
+  const [redeemTeamId, setRedeemTeamId] = useState<number>(fixedTeamId ?? teams[0]?.id ?? 1);
   const [redeeming, setRedeeming] = useState(false);
   const { toast } = useToast();
   const singleTeam = fixedTeamId != null;
@@ -215,8 +213,11 @@ export function PenaltyShop({
                     value={redeemTeamId}
                     onChange={(e) => setRedeemTeamId(Number(e.target.value))}
                   >
-                    <option value={1}>{team1Name}</option>
-                    <option value={2}>{team2Name}</option>
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -260,22 +261,17 @@ export function PenaltyShop({
                   </Button>
                 ) : (
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={status !== "authenticated" || buying !== null}
-                      onClick={() => buy(opt.id, 1)}
-                    >
-                      {team1Name}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={status !== "authenticated" || buying !== null}
-                      onClick={() => buy(opt.id, 2)}
-                    >
-                      {team2Name}
-                    </Button>
+                    {teams.map((team) => (
+                      <Button
+                        key={team.id}
+                        size="sm"
+                        variant="outline"
+                        disabled={status !== "authenticated" || buying !== null}
+                        onClick={() => buy(opt.id, team.id)}
+                      >
+                        {team.name}
+                      </Button>
+                    ))}
                   </div>
                 )}
               </motion.li>

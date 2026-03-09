@@ -14,12 +14,8 @@ type PenaltyItem = {
 };
 
 export function HomeClient({
-  team1Name,
-  team2Name,
   recentPenalties,
 }: {
-  team1Name: string;
-  team2Name: string;
   recentPenalties: PenaltyItem[];
 }) {
   const { data: session, status } = useSession();

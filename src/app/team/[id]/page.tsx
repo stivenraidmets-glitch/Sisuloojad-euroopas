@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { ensureDefaultTeams } from "@/lib/default-teams";
 import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
@@ -16,7 +17,8 @@ export default async function TeamPage({
 }) {
   const { id } = await params;
   const teamId = parseInt(id, 10);
-  if (teamId !== 1 && teamId !== 2) notFound();
+  if (!Number.isInteger(teamId) || teamId <= 0) notFound();
+  await ensureDefaultTeams();
 
   const [team, allTeams, penaltyQueue, trailPoints] = await Promise.all([
     prisma.team.findUnique({
@@ -51,9 +53,6 @@ export default async function TeamPage({
           .reverse()
           .map((p) => [p.lng, p.lat] as [number, number])
       : null;
-
-  const team1Name = allTeams[0]?.name ?? "Kozip";
-  const team2Name = allTeams[1]?.name ?? "Stiven ja Sidni";
 
   const locationText =
     team.lastLat != null && team.lastLng != null
@@ -108,8 +107,7 @@ export default async function TeamPage({
 
         <div className="flex flex-col">
           <PenaltyShop
-            team1Name={team1Name}
-            team2Name={team2Name}
+            teams={allTeams}
             fixedTeamId={team.id}
             fixedTeamName={team.name}
           />

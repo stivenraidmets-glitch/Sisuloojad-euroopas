@@ -23,8 +23,7 @@ type PenaltyItem = {
 };
 
 type RightPanelProps = {
-  team1Name: string;
-  team2Name: string;
+  teams: { id: number; name: string; color: string }[];
   recentPenalties: PenaltyItem[];
 };
 
@@ -35,7 +34,7 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: 
   { id: "settings", label: "Seaded", icon: Settings },
 ];
 
-export function RightPanel({ team1Name, team2Name, recentPenalties }: RightPanelProps) {
+export function RightPanel({ teams, recentPenalties }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("chat");
 
   useEffect(() => {
@@ -72,19 +71,12 @@ export function RightPanel({ team1Name, team2Name, recentPenalties }: RightPanel
           </div>
         )}
         {activeTab === "vote" && (
-          <VoteModule team1Name={team1Name} team2Name={team2Name} />
+          <VoteModule teams={teams} />
         )}
         {activeTab === "punishments" && (
           <div className="space-y-4">
-            <PenaltyShop
-              team1Name={team1Name}
-              team2Name={team2Name}
-            />
-            <HomeClient
-              team1Name={team1Name}
-              team2Name={team2Name}
-              recentPenalties={[]}
-            />
+            <PenaltyShop teams={teams} />
+            <HomeClient recentPenalties={[]} />
             <RecentPenaltiesCard penalties={recentPenalties} />
           </div>
         )}

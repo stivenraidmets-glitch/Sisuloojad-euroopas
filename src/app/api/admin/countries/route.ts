@@ -36,8 +36,15 @@ export async function POST(req: Request) {
   const body = await req.json();
   const countryCode = typeof body.countryCode === "string" ? body.countryCode.trim().toUpperCase().slice(0, 2) : "";
   const teamId = parseInt(body.teamId, 10);
-  if (!countryCode || (teamId !== 1 && teamId !== 2)) {
-    return NextResponse.json({ error: "countryCode (2 letters) and teamId (1 or 2) required" }, { status: 400 });
+  if (!Number.isInteger(teamId) || teamId <= 0) {
+    return NextResponse.json({ error: "countryCode (2 letters) and valid teamId required" }, { status: 400 });
+  }
+  const teamExists = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { id: true },
+  });
+  if (!countryCode || !teamExists) {
+    return NextResponse.json({ error: "countryCode (2 letters) and valid teamId required" }, { status: 400 });
   }
   try {
     await prisma.countryUnlock.upsert({

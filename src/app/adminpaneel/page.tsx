@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { ensureDefaultTeams } from "@/lib/default-teams";
 import type { Prisma } from "@prisma/client";
 import {
   AdminClient,
@@ -26,6 +27,7 @@ type CountryUnlockWithTeam = Awaited<ReturnType<typeof prisma.countryUnlock.find
 export default async function AdminPage() {
   let results: PromiseSettledResult<unknown>[];
   try {
+    await ensureDefaultTeams();
     results = await Promise.allSettled([
     prisma.team.findMany({ orderBy: { id: "asc" } }),
     prisma.penalty.findMany({

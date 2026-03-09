@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useRef, useCallback } from "react";
+import { Suspense, useState, useRef, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 const BROADCAST_INTERVAL_MS = 30000; // 30 seconds
 
 function BroadcastContent() {
-  const [teamId, setTeamId] = useState<1 | 2>(1);
+  const [teams, setTeams] = useState<{ id: number; name: string }[]>([]);
+  const [teamId, setTeamId] = useState<number>(1);
   const [sharing, setSharing] = useState(false);
   const [lastSent, setLastSent] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -20,6 +21,22 @@ function BroadcastContent() {
 
   const secretToSend =
     secretFromUrl || (process.env.NEXT_PUBLIC_BROADCAST_SECRET || "").trim() || "broadcast";
+
+  useEffect(() => {
+    fetch("/api/teams")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!Array.isArray(data)) return;
+        const nextTeams = data.map((team) => ({ id: team.id, name: team.name }));
+        setTeams(nextTeams);
+        if (nextTeams.length > 0) {
+          setTeamId((current) =>
+            nextTeams.some((team) => team.id === current) ? current : nextTeams[0].id
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const sendLocation = useCallback(
     (lat: number, lng: number) => {
@@ -84,11 +101,14 @@ function BroadcastContent() {
             <select
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
               value={teamId}
-              onChange={(e) => setTeamId(parseInt(e.target.value, 10) as 1 | 2)}
+              onChange={(e) => setTeamId(parseInt(e.target.value, 10))}
               disabled={sharing}
             >
-              <option value={1}>Kozip</option>
-              <option value={2}>Stiven ja Sidni</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
             </select>
           </div>
           <p className="text-sm text-muted-foreground">

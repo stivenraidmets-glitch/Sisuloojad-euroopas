@@ -34,7 +34,7 @@ const TRAILS_SOURCE_ID = "teams-trails";
 const TRAILS_LAYER_ID = "teams-trails-line";
 const COUNTRIES_SOURCE_ID = "country-unlocks";
 const COUNTRIES_LAYER_ID = "country-unlocks-fill";
-const SPAIN_CODE = "ES"; // start of race; show half team 1 / half team 2
+const SPAIN_CODE = "ES"; // start of race; show all team colors as stripes
 const SPAIN_PATTERN_ID = "spain-start-pattern";
 const SPAIN_LAYER_ID = "spain-start-fill";
 const ESTONIA_CODE = "EE"; // grand finish – gold glow
@@ -46,10 +46,11 @@ const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural
 const COUNTRY_FILL_OPACITY = 0.35;
 export const OPEN_PANEL_TAB = "open-panel-tab" as const;
 
-// Default positions when no location has been broadcast yet (Paris → Tallinn race)
+// Default positions when no location has been broadcast yet.
 const DEFAULT_POSITIONS: Record<number, [number, number]> = {
-  1: [48.8566, 2.3522],   // Paris
-  2: [59.437, 24.7536],   // Tallinn
+  1: [40.4168, -3.7038], // Madrid
+  2: [41.6488, -0.8891], // Zaragoza
+  3: [39.4699, -0.3763], // Valencia
 };
 
 type ActivePenalty = {
@@ -487,22 +488,20 @@ export function RaceMap({
         );
       }
 
-      // Spain = start; fill with half team 1, half team 2
-      const team1 = teams[0];
-      const team2 = teams[1];
-      const color1 = team1?.color ?? "#3b82f6";
-      const color2 = team2?.color ?? "#8b5cf6";
+      // Spain = start; fill with stripes for all teams
+      const stripeColors = teams.map((team) => team.color).filter(Boolean);
       const size = 32;
       const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
       if (canvas) {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.fillStyle = color1;
-          ctx.fillRect(0, 0, size / 2, size);
-          ctx.fillStyle = color2;
-          ctx.fillRect(size / 2, 0, size / 2, size);
+        if (ctx && stripeColors.length > 0) {
+          const stripeWidth = size / stripeColors.length;
+          stripeColors.forEach((color, index) => {
+            ctx.fillStyle = color;
+            ctx.fillRect(index * stripeWidth, 0, stripeWidth, size);
+          });
           const imageData = ctx.getImageData(0, 0, size, size);
           if (map.hasImage(SPAIN_PATTERN_ID)) map.removeImage(SPAIN_PATTERN_ID);
           map.addImage(SPAIN_PATTERN_ID, imageData, { width: size, height: size });
@@ -831,12 +830,25 @@ export function RaceMap({
 
   const teamsWithPenalty = teams.filter((t) => isPenaltyStillActive(t.activePenalty));
 
-  // Distance between the two teams (when both have valid positions)
-  const team1 = teams[0];
-  const team2 = teams[1];
-  const valid1 = team1 && typeof team1.lat === "number" && typeof team1.lng === "number" && !(team1.lat === 0 && team1.lng === 0);
-  const valid2 = team2 && typeof team2.lat === "number" && typeof team2.lng === "number" && !(team2.lat === 0 && team2.lng === 0);
-  const distanceKm = valid1 && valid2 ? haversineDistanceKm(team1.lat, team1.lng, team2.lat, team2.lng) : null;
+  // Distance summary: for 2 teams show gap, for 3+ teams show largest gap
+  const validDistanceTeams = teams.filter(
+    (team) =>
+      typeof team.lat === "number" &&
+      typeof team.lng === "number" &&
+      !(team.lat === 0 && team.lng === 0)
+  );
+  let distanceKm: number | null = null;
+  for (let i = 0; i < validDistanceTeams.length; i += 1) {
+    for (let j = i + 1; j < validDistanceTeams.length; j += 1) {
+      const d = haversineDistanceKm(
+        validDistanceTeams[i].lat,
+        validDistanceTeams[i].lng,
+        validDistanceTeams[j].lat,
+        validDistanceTeams[j].lng
+      );
+      if (distanceKm == null || d > distanceKm) distanceKm = d;
+    }
+  }
   const distanceText = distanceKm != null
     ? distanceKm < 1
       ? `${Math.round(distanceKm * 1000)} m`
@@ -854,7 +866,9 @@ export function RaceMap({
       <div className="absolute left-2 top-2 flex w-fit max-w-[85%] flex-col gap-2">
         {distanceText != null && (
           <div className="rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur">
-            <span className="text-muted-foreground">Tiimide vahe: </span>
+            <span className="text-muted-foreground">
+              {validDistanceTeams.length > 2 ? "Suurim tiimide vahe: " : "Tiimide vahe: "}
+            </span>
             <span className="text-primary font-semibold">{distanceText}</span>
           </div>
         )}
