@@ -9,6 +9,7 @@ import type { TeamLocation } from "@/types";
 import { haversineDistanceKm } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TeamMarkerPopup } from "./TeamMarkerPopup";
+import { EventTimer } from "@/components/event/EventTimer";
 
 const MAP_CENTER: [number, number] = [15.5, 52]; // fallback Europe
 const MAP_ZOOM = 4; // default zoom (Europe regional); map starts at this height
@@ -864,6 +865,7 @@ export function RaceMap({
         </div>
       )}
       <div className="absolute left-2 top-2 flex w-fit max-w-[85%] flex-col gap-2">
+        <EventTimer />
         {distanceText != null && (
           <div className="rounded bg-background/90 px-2 py-1.5 text-xs font-medium backdrop-blur">
             <span className="text-muted-foreground">

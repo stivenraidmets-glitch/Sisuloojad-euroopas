@@ -186,6 +186,52 @@ function PenaltyActions({
 
 export { PenaltyActions };
 
+export function EventTimerControls({ initialStartedAt }: { initialStartedAt: string | null }) {
+  const [startedAt, setStartedAt] = useState<string | null>(initialStartedAt);
+  const [resetting, setResetting] = useState(false);
+  const { toast } = useToast();
+
+  const resetTimer = async () => {
+    setResetting(true);
+    try {
+      const res = await fetch("/api/admin/event-timer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Failed");
+      }
+      const data = await res.json();
+      if (data.startedAt) setStartedAt(data.startedAt);
+      toast({ title: "Sündmuse taimer lähtestatud. Vaatajaid uuendatakse otseülekanne." });
+    } catch (e) {
+      toast({
+        title: "Lähtestamine ebaõnnestus (võib-olla vajad sisselogimist)",
+        variant: "destructive",
+      });
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {startedAt ? (
+          <>Alustatud: {new Date(startedAt).toLocaleString()}</>
+        ) : (
+          <>Taimer pole veel alustatud.</>
+        )}
+      </p>
+      <Button onClick={resetTimer} disabled={resetting}>
+        {resetting ? "Lähtestan…" : "Lähtesta sündmuse taimer"}
+      </Button>
+    </div>
+  );
+}
+
 function SetTeamLocation({
   teamId,
   teamName,

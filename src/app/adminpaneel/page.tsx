@@ -8,6 +8,7 @@ import {
   CountryUnlockControls,
   TeamLocationMapWithControls,
   PenaltyActions,
+  EventTimerControls,
 } from "./AdminClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -66,7 +67,10 @@ export default async function AdminPage() {
   const teams = (results[0].status === "fulfilled" ? results[0].value : []) as Awaited<ReturnType<typeof prisma.team.findMany>>;
   const penalties = (results[1].status === "fulfilled" ? results[1].value : []) as PenaltyWithRelations[];
   const purchases = (results[2].status === "fulfilled" ? results[2].value : []) as PurchaseWithRelations[];
-  const raceStatus = (results[3].status === "fulfilled" ? results[3].value : null) as { status?: string } | null;
+  const raceStatus = (results[3].status === "fulfilled" ? results[3].value : null) as {
+    status?: string;
+    eventStartedAt?: Date | null;
+  } | null;
   const wheelConfig = (results[4].status === "fulfilled" ? results[4].value : null) as { outcomesJson?: string } | null;
   const voteCounts = (results[5].status === "fulfilled" ? results[5].value : []) as { teamId: number; _count: number }[];
   const countryUnlocks = (results[6].status === "fulfilled" ? results[6].value : []) as CountryUnlockWithTeam[];
@@ -90,6 +94,16 @@ export default async function AdminPage() {
         initialWheelConfig={wheelConfig?.outcomesJson ?? "[]"}
         initialUnlocks={countryUnlocks.map((u) => ({ ...u, unlockedAt: u.unlockedAt.toISOString() }))}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Sündmuse taimer</CardTitle>
+          <CardDescription>Näitab, kui kaua võistlus on kestnud. Lähtesta, et alustada loendust uuesti.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EventTimerControls initialStartedAt={raceStatus?.eventStartedAt?.toISOString() ?? null} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
