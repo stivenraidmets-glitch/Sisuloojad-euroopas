@@ -62,12 +62,20 @@ function getCountryCode(f: GeoJSON.Feature): string | null {
   return typeof code === "string" ? code.toUpperCase() : null;
 }
 
+function isSpainFeature(f: GeoJSON.Feature): boolean {
+  if (getCountryCode(f) === SPAIN_CODE) return true;
+  const p = f.properties as Record<string, unknown> | undefined;
+  if (!p) return false;
+  const adm = (p.ADM0_A3 ?? p.SOV_A3 ?? "") as string;
+  return adm.toUpperCase() === "ESP";
+}
+
 function buildSpainStripesGeoJson(
   countries: GeoJSON.FeatureCollection | null
 ): FeatureCollection<Polygon | MultiPolygon> | null {
   if (!countries?.features?.length) return null;
-  const spainFeature = countries.features.find(
-    (f) => getCountryCode(f) === SPAIN_CODE
+  const spainFeature = countries.features.find((f) =>
+    isSpainFeature(f)
   ) as GeoJSON.Feature<Polygon | MultiPolygon> | undefined;
   if (!spainFeature?.geometry) return null;
   try {
