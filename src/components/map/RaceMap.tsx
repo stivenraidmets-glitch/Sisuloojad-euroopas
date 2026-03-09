@@ -440,9 +440,12 @@ export function RaceMap({
         "match",
         ["upcase", ["coalesce", ["get", "iso_a2"], ["get", "ISO_A2"]]],
       ];
+      // Natural Earth 50m uses "-99" for France instead of "FR"; map both so FR assignment works
+      const FR_NATURAL_EARTH_ALIAS = "-99";
       Object.entries(countryColors).forEach(([code, color]) => {
         if (code === SPAIN_CODE) return; // Spain drawn separately as half team 1 / half team 2 (start)
         matchExpr.push(code, color);
+        if (code === "FR") matchExpr.push(FR_NATURAL_EARTH_ALIAS, color);
       });
       matchExpr.push("rgba(0,0,0,0)");
 
