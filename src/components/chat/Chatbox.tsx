@@ -2,9 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Send, MessageCircle } from "lucide-react";
+import { Send, MessageCircle, Smile, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const GIF_URL_HOSTS = [
   "giphy.com",
@@ -30,6 +36,18 @@ function isGifUrl(body: string): boolean {
   return false;
 }
 
+const EMOJI_LIST = [
+  "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂",
+  "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋",
+  "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐",
+  "😐", "😑", "😶", "😏", "😣", "😥", "😮", "🤐", "😯", "😪",
+  "😫", "😴", "🤤", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵",
+  "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "👍", "👎", "👏", "🙌",
+  "🤝", "🙏", "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍",
+  "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "🔥",
+  "⭐", "🌟", "✨", "💫", "🎉", "🎊", "🏆", "✅", "❌", "⚠️",
+];
+
 type ChatMessage = {
   id: string;
   body: string;
@@ -39,12 +57,22 @@ type ChatMessage = {
 
 type ChatboxProps = { embedded?: boolean };
 
+type GifResult = { id: string; url: string; title: string };
+
 export function Chatbox({ embedded }: ChatboxProps = {}) {
   const { data: session, status } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [gifOpen, setGifOpen] = useState(false);
+  const [gifQuery, setGifQuery] = useState("");
+  const [gifResults, setGifResults] = useState<GifResult[]>([]);
+  const [gifSearching, setGifSearching] = useState(false);
   const messagesEndRef = useRef<HTMLUListElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const emojiPopoverRef = useRef<HTMLDivElement>(null);
+  const gifSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -67,6 +95,78 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     const el = messagesEndRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const close = (e: MouseEvent) => {
+      if (
+        emojiPopoverRef.current &&
+        !emojiPopoverRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setEmojiOpen(false);
+      }
+    };
+    document.addEventListener("click", close, true);
+    return () => document.removeEventListener("click", close, true);
+  }, [emojiOpen]);
+
+  // GIF search with debounce
+  useEffect(() => {
+    if (!gifOpen) return;
+    const q = gifQuery.trim();
+    if (!q) {
+      setGifResults([]);
+      return;
+    }
+    if (gifSearchTimeoutRef.current) clearTimeout(gifSearchTimeoutRef.current);
+    gifSearchTimeoutRef.current = setTimeout(async () => {
+      setGifSearching(true);
+      try {
+        const res = await fetch(`/api/chat/gif-search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setGifResults(Array.isArray(data) ? data : []);
+      } catch {
+        setGifResults([]);
+      } finally {
+        setGifSearching(false);
+      }
+    }, 300);
+    return () => {
+      if (gifSearchTimeoutRef.current) {
+        clearTimeout(gifSearchTimeoutRef.current);
+        gifSearchTimeoutRef.current = null;
+      }
+    };
+  }, [gifOpen, gifQuery]);
+
+  async function sendGif(gifUrl: string) {
+    if (sending) return;
+    setGifOpen(false);
+    setGifQuery("");
+    setGifResults([]);
+    setSending(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: gifUrl }),
+      });
+      if (res.ok) {
+        const newMsg = await res.json();
+        setMessages((prev) => [...prev, newMsg]);
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function insertEmoji(emoji: string) {
+    setInput((prev) => prev + emoji);
+    inputRef.current?.focus();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -149,19 +249,119 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
             </li>
           ))}
         </ul>
-        <form onSubmit={handleSubmit} className="flex shrink-0 gap-2 border-t p-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Sõnum või GIF link..."
-            maxLength={800}
-            className="flex-1 text-sm"
-            disabled={sending}
-          />
+        <form onSubmit={handleSubmit} className="relative flex shrink-0 gap-2 border-t p-2">
+          <div className="relative flex flex-1 items-center gap-1">
+            <div className="relative" ref={emojiPopoverRef}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setEmojiOpen((open) => !open);
+                }}
+                title="Emoji"
+                aria-label="Lisa emoji"
+              >
+                <Smile className="h-5 w-5" />
+              </Button>
+              {emojiOpen && (
+                <div className="absolute bottom-full left-0 z-50 mb-1 max-h-48 w-72 overflow-y-auto rounded-lg border bg-card p-2 shadow-lg">
+                  <div className="grid grid-cols-10 gap-0.5">
+                    {EMOJI_LIST.map((emoji, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className="rounded p-1.5 text-lg leading-none hover:bg-accent"
+                        onClick={() => insertEmoji(emoji)}
+                        aria-label={`Emoji ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <Input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Sõnum, emoji või GIF..."
+              maxLength={800}
+              className="flex-1 text-sm"
+              disabled={sending}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => setGifOpen(true)}
+            title="Otsi GIF"
+            aria-label="Otsi GIF"
+          >
+            <ImageIcon className="h-5 w-5" />
+          </Button>
           <Button type="submit" size="icon" disabled={sending || !input.trim()}>
             <Send className="h-4 w-4" />
           </Button>
         </form>
+
+        <Dialog
+          open={gifOpen}
+          onOpenChange={(open) => {
+            setGifOpen(open);
+            if (!open) {
+              setGifQuery("");
+              setGifResults([]);
+            }
+          }}
+        >
+          <DialogContent className="max-h-[85vh] max-w-md overflow-hidden flex flex-col" showClose={true}>
+            <DialogHeader>
+              <DialogTitle>Otsi GIF</DialogTitle>
+            </DialogHeader>
+            <Input
+              placeholder="Sisesta otsingusõna..."
+              value={gifQuery}
+              onChange={(e) => setGifQuery(e.target.value)}
+              className="mb-3"
+              autoFocus
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {gifSearching && (
+                <p className="py-4 text-center text-sm text-muted-foreground">Otsin...</p>
+              )}
+              {!gifSearching && gifQuery.trim() && gifResults.length === 0 && (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  Tulemusi ei leitud. Proovi teist otsingut.
+                </p>
+              )}
+              {!gifSearching && gifResults.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {gifResults.map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      className="overflow-hidden rounded-lg border bg-muted/30 transition hover:opacity-90 focus:ring-2 focus:ring-ring"
+                      onClick={() => sendGif(g.url)}
+                    >
+                      <img
+                        src={g.url}
+                        alt={g.title || "GIF"}
+                        className="h-24 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
