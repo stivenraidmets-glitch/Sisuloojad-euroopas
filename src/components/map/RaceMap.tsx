@@ -399,12 +399,28 @@ export function RaceMap({
     };
   }, [fetchTeams, fetchTrails, fetchCountryUnlocks]);
 
-  // When buyer completes checkout (popup), refetch so map updates even if Pusher is slow
+  // When buyer completes checkout (popup), refetch so map updates. Webhook can run after
+  // redirect so refetch immediately and again after delays to catch the new penalty live.
+  const checkoutRefetchTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
-    const onCheckout = () => fetchTeams();
+    const onCheckout = () => {
+      checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
+      checkoutRefetchTimeoutsRef.current = [];
+      fetchTeams();
+      fetchCountryUnlocks();
+      checkoutRefetchTimeoutsRef.current = [
+        setTimeout(fetchTeams, 1500),
+        setTimeout(fetchTeams, 3500),
+        setTimeout(fetchTeams, 5500),
+      ];
+    };
     window.addEventListener("checkout-success", onCheckout);
-    return () => window.removeEventListener("checkout-success", onCheckout);
-  }, [fetchTeams]);
+    return () => {
+      window.removeEventListener("checkout-success", onCheckout);
+      checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
+      checkoutRefetchTimeoutsRef.current = [];
+    };
+  }, [fetchTeams, fetchCountryUnlocks]);
 
   // Countdown ticker for penalty timers: update timer DOM; when 0, remove timer and refetch
   useEffect(() => {
