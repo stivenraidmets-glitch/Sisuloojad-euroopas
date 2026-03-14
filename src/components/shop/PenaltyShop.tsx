@@ -2,11 +2,18 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Gift } from "lucide-react";
+import { Gift, ShoppingCart } from "lucide-react";
 
 type PenaltyOption = {
   id: string;
@@ -43,6 +50,9 @@ export function PenaltyShop({
   const [redeemOptionId, setRedeemOptionId] = useState("");
   const [redeemTeamId, setRedeemTeamId] = useState<number>(fixedTeamId ?? teams[0]?.id ?? 1);
   const [redeeming, setRedeeming] = useState(false);
+  const [chooseTeamOpen, setChooseTeamOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<PenaltyOption | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const { toast } = useToast();
   const singleTeam = fixedTeamId != null;
   const freeBalance = winnings?.freePenaltyBalance ?? 0;
@@ -140,6 +150,20 @@ export function PenaltyShop({
     }
   };
 
+  const openChooseTeam = (opt: PenaltyOption) => {
+    setSelectedOption(opt);
+    setSelectedTeamId(teams[0]?.id ?? null);
+    setChooseTeamOpen(true);
+  };
+
+  const confirmBuyForTeam = async () => {
+    if (!selectedOption || selectedTeamId == null) return;
+    await buy(selectedOption.id, selectedTeamId);
+    setChooseTeamOpen(false);
+    setSelectedOption(null);
+    setSelectedTeamId(null);
+  };
+
   const redeemFree = async () => {
     if (!redeemOptionId || !redeemTeamId) {
       toast({ title: "Vali karistus ja meeskond", variant: "destructive" });
@@ -234,52 +258,76 @@ export function PenaltyShop({
         {loading ? (
           <p className="text-muted-foreground">Laeb…</p>
         ) : (
-          <ul className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             {options.map((opt) => (
-              <motion.li
+              <Button
                 key={opt.id}
-                className="flex min-w-0 flex-col gap-3 rounded-lg border p-4"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
+                variant="outline"
+                className="h-auto flex-col items-stretch gap-2 p-4 text-left"
+                disabled={status !== "authenticated" || buying !== null}
+                onClick={() =>
+                  singleTeam && fixedTeamId != null
+                    ? buy(opt.id, fixedTeamId)
+                    : openChooseTeam(opt)
+                }
               >
-                <div className="min-w-0">
-                  <p className="font-medium">{opt.title}</p>
-                  {opt.description && (
-                    <p className="text-sm text-muted-foreground">{opt.description}</p>
-                  )}
-                  <p className="text-sm font-medium text-primary">
-                    €{(opt.priceCents / 100).toFixed(2)}
-                  </p>
-                </div>
-                {singleTeam && fixedTeamId != null ? (
-                  <Button
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={status !== "authenticated" || buying !== null}
-                    onClick={() => buy(opt.id, fixedTeamId)}
-                  >
-                    {buying === opt.id ? "Suunan…" : "Osta"}
-                  </Button>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {teams.map((team) => (
-                      <Button
-                        key={team.id}
-                        size="sm"
-                        variant="outline"
-                        className="w-full justify-center"
-                        disabled={status !== "authenticated" || buying !== null}
-                        onClick={() => buy(opt.id, team.id)}
-                      >
-                        {team.name}
-                      </Button>
-                    ))}
-                  </div>
+                <span className="font-medium">{opt.title}</span>
+                {opt.description && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {opt.description}
+                  </span>
                 )}
-              </motion.li>
+                <span className="text-sm text-primary">
+                  €{(opt.priceCents / 100).toFixed(2)} · {singleTeam ? "Osta" : "Vali meeskond"}
+                </span>
+              </Button>
             ))}
-          </ul>
+          </div>
         )}
+
+        <Dialog open={chooseTeamOpen} onOpenChange={setChooseTeamOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Kellele soovid karistuse osta?</DialogTitle>
+              <DialogDescription>
+                {selectedOption ? (
+                  <>
+                    {selectedOption.title} — €{(selectedOption.priceCents / 100).toFixed(2)}
+                  </>
+                ) : (
+                  "Vali meeskond"
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-2 py-2">
+              {teams.map((team) => (
+                <Button
+                  key={team.id}
+                  variant={selectedTeamId === team.id ? "default" : "outline"}
+                  className="w-full justify-center"
+                  onClick={() => setSelectedTeamId(team.id)}
+                >
+                  {team.name}
+                </Button>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setChooseTeamOpen(false)}
+              >
+                Tühista
+              </Button>
+              <Button
+                disabled={!selectedTeamId || buying !== null}
+                onClick={confirmBuyForTeam}
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                {buying ? "Suunan…" : "Maksma"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
