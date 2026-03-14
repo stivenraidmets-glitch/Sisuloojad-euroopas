@@ -1,9 +1,18 @@
 import { Suspense } from "react";
+import nextDynamic from "next/dynamic";
 import { prisma } from "@/lib/db";
 import { getTeamPenaltyQueue } from "@/lib/penalty-queue";
 import { ensureDefaultTeams } from "@/lib/default-teams";
-import { RaceMap } from "@/components/map/RaceMap";
 import { RightPanel } from "@/components/layout/RightPanel";
+
+const RaceMap = nextDynamic(() => import("@/components/map/RaceMap").then((m) => ({ default: m.RaceMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[400px] flex-1 items-center justify-center rounded-lg bg-muted/30">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+    </div>
+  ),
+});
 
 export const dynamic = "force-dynamic";
 
@@ -87,13 +96,11 @@ export default async function HomePage() {
     <>
       <main className="flex min-h-0 flex-1 flex-col px-2 py-2 md:px-4 md:py-4">
         <section className="flex min-h-0 flex-1 flex-col">
-          <Suspense fallback={<div className="min-h-[400px] flex-1 animate-pulse rounded-lg bg-muted" />}>
-            <RaceMap
+          <RaceMap
               teams={teams}
               accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? ""}
               fullHeight
             />
-          </Suspense>
         </section>
       </main>
       <RightPanel

@@ -267,11 +267,12 @@ export function PenaltyShop({
                         key={team.id}
                         size="sm"
                         variant="outline"
-                        className="w-full"
+                        className="w-full min-w-0 overflow-hidden"
                         disabled={status !== "authenticated" || buying !== null}
                         onClick={() => buy(opt.id, team.id)}
+                        title={team.name}
                       >
-                        {team.name}
+                        <span className="block min-w-0 truncate">{team.name}</span>
                       </Button>
                     ))}
                   </div>

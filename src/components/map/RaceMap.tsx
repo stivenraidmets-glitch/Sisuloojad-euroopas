@@ -50,6 +50,7 @@ const ESTONIA_GLOW_LAYER_ID = "estonia-finish-glow";
 const ESTONIA_GOLD = "#eab308";
 const ESTONIA_GLOW_COLOR = "#fde047";
 const COUNTRIES_GEOJSON_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson";
+const COUNTRIES_CACHE_KEY = "countries-geojson-v1";
 const COUNTRY_FILL_OPACITY = 0.35;
 export const OPEN_PANEL_TAB = "open-panel-tab" as const;
 
@@ -356,26 +357,41 @@ export function RaceMap({
     return () => cleanup?.();
   }, [channelName, fetchTeams, fetchTrails, fetchCountryUnlocks]);
 
-  // Load countries GeoJSON once (for country fill layer)
+  // Load countries GeoJSON once (cached in sessionStorage for fast repeat visits)
   useEffect(() => {
     let cancelled = false;
+    try {
+      const cached = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(COUNTRIES_CACHE_KEY) : null;
+      if (cached) {
+        const data = JSON.parse(cached) as GeoJSON.FeatureCollection;
+        if (data?.features?.length) {
+          setCountriesGeoJson(data);
+          return;
+        }
+      }
+    } catch (_) {}
     fetch(COUNTRIES_GEOJSON_URL)
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setCountriesGeoJson(data);
+        if (!cancelled && data?.features?.length) {
+          setCountriesGeoJson(data);
+          try {
+            if (typeof sessionStorage !== "undefined") sessionStorage.setItem(COUNTRIES_CACHE_KEY, JSON.stringify(data));
+          } catch (_) {}
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
-  // Poll: soon, then every 5s (so new punishments and timer end show without refresh).
+  // Poll: after map has had time to paint, then every 5s (avoids competing with GeoJSON load).
   useEffect(() => {
     const doFetch = () => {
       fetchTeams();
       fetchTrails();
       fetchCountryUnlocks();
     };
-    const t0 = setTimeout(doFetch, 500);
+    const t0 = setTimeout(doFetch, 1800);
     const interval = setInterval(doFetch, 5000);
     return () => {
       clearTimeout(t0);
