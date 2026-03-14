@@ -402,16 +402,34 @@ export function RaceMap({
   // When buyer completes checkout (popup), refetch so map updates. Webhook can run after
   // redirect so refetch immediately and again after delays to catch the new penalty live.
   const checkoutRefetchTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const checkoutPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runCheckoutRefetches = useCallback(() => {
     checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
     checkoutRefetchTimeoutsRef.current = [];
+    if (checkoutPollIntervalRef.current) {
+      clearInterval(checkoutPollIntervalRef.current);
+      checkoutPollIntervalRef.current = null;
+    }
     fetchTeams();
     fetchCountryUnlocks();
     checkoutRefetchTimeoutsRef.current = [
-      setTimeout(fetchTeams, 1500),
-      setTimeout(fetchTeams, 3500),
-      setTimeout(fetchTeams, 5500),
+      setTimeout(fetchTeams, 800),
+      setTimeout(fetchTeams, 2000),
+      setTimeout(fetchTeams, 4000),
+      setTimeout(fetchTeams, 7000),
     ];
+    const pollMs = 2000;
+    const pollDurationMs = 22000;
+    checkoutPollIntervalRef.current = setInterval(() => {
+      fetchTeams();
+      fetchCountryUnlocks();
+    }, pollMs);
+    setTimeout(() => {
+      if (checkoutPollIntervalRef.current) {
+        clearInterval(checkoutPollIntervalRef.current);
+        checkoutPollIntervalRef.current = null;
+      }
+    }, pollDurationMs);
   }, [fetchTeams, fetchCountryUnlocks]);
 
   useEffect(() => {
@@ -421,6 +439,10 @@ export function RaceMap({
       window.removeEventListener("checkout-success", onCheckout);
       checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
       checkoutRefetchTimeoutsRef.current = [];
+      if (checkoutPollIntervalRef.current) {
+        clearInterval(checkoutPollIntervalRef.current);
+        checkoutPollIntervalRef.current = null;
+      }
     };
   }, [runCheckoutRefetches]);
 

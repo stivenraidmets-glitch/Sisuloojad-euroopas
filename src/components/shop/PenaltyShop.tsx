@@ -126,7 +126,9 @@ export function PenaltyShop({
             setBuying(null);
             toast({ title: "Ost edukas! Karistus on aktiivne." });
             fetchWinnings();
-            window.dispatchEvent(new CustomEvent("checkout-success"));
+            for (let i = 0; i < 3; i++) {
+              setTimeout(() => window.dispatchEvent(new CustomEvent("checkout-success")), i * 150);
+            }
           }
         };
         window.addEventListener("message", onMessage);
