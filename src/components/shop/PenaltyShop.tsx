@@ -238,11 +238,11 @@ export function PenaltyShop({
             {options.map((opt) => (
               <motion.li
                 key={opt.id}
-                className="flex min-w-0 flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+                className="flex min-w-0 flex-col gap-3 rounded-lg border p-4"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <p className="font-medium">{opt.title}</p>
                   {opt.description && (
                     <p className="text-sm text-muted-foreground">{opt.description}</p>
@@ -254,19 +254,20 @@ export function PenaltyShop({
                 {singleTeam && fixedTeamId != null ? (
                   <Button
                     size="sm"
+                    className="w-full sm:w-auto"
                     disabled={status !== "authenticated" || buying !== null}
                     onClick={() => buy(opt.id, fixedTeamId)}
                   >
                     {buying === opt.id ? "Suunan…" : "Osta"}
                   </Button>
                 ) : (
-                  <div className="flex min-w-0 flex-wrap gap-2">
+                  <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
                     {teams.map((team) => (
                       <Button
                         key={team.id}
                         size="sm"
                         variant="outline"
-                        className="shrink-0"
+                        className="w-full"
                         disabled={status !== "authenticated" || buying !== null}
                         onClick={() => buy(opt.id, team.id)}
                       >
