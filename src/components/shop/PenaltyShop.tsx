@@ -261,18 +261,17 @@ export function PenaltyShop({
                     {buying === opt.id ? "Suunan…" : "Osta"}
                   </Button>
                 ) : (
-                  <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="flex flex-col gap-2">
                     {teams.map((team) => (
                       <Button
                         key={team.id}
                         size="sm"
                         variant="outline"
-                        className="w-full min-w-0 overflow-hidden"
+                        className="w-full justify-center"
                         disabled={status !== "authenticated" || buying !== null}
                         onClick={() => buy(opt.id, team.id)}
-                        title={team.name}
                       >
-                        <span className="block min-w-0 truncate">{team.name}</span>
+                        {team.name}
                       </Button>
                     ))}
                   </div>
