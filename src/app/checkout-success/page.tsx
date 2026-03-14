@@ -13,6 +13,11 @@ export default function CheckoutSuccessPage() {
 
     if (typeof window === "undefined") return;
 
+    if (status === "success") {
+      try {
+        sessionStorage.setItem("checkout-success-at", String(Date.now()));
+      } catch (_) {}
+    }
     if (window.opener) {
       if (status === "success") {
         window.opener.postMessage(

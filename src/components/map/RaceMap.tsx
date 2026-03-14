@@ -281,7 +281,7 @@ export function RaceMap({
 
   const fetchTeams = useCallback(async () => {
     try {
-      const res = await fetch("/api/teams");
+      const res = await fetch("/api/teams", { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       setTeams((prev) =>
@@ -402,25 +402,46 @@ export function RaceMap({
   // When buyer completes checkout (popup), refetch so map updates. Webhook can run after
   // redirect so refetch immediately and again after delays to catch the new penalty live.
   const checkoutRefetchTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const runCheckoutRefetches = useCallback(() => {
+    checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
+    checkoutRefetchTimeoutsRef.current = [];
+    fetchTeams();
+    fetchCountryUnlocks();
+    checkoutRefetchTimeoutsRef.current = [
+      setTimeout(fetchTeams, 1500),
+      setTimeout(fetchTeams, 3500),
+      setTimeout(fetchTeams, 5500),
+    ];
+  }, [fetchTeams, fetchCountryUnlocks]);
+
   useEffect(() => {
-    const onCheckout = () => {
-      checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
-      checkoutRefetchTimeoutsRef.current = [];
-      fetchTeams();
-      fetchCountryUnlocks();
-      checkoutRefetchTimeoutsRef.current = [
-        setTimeout(fetchTeams, 1500),
-        setTimeout(fetchTeams, 3500),
-        setTimeout(fetchTeams, 5500),
-      ];
-    };
+    const onCheckout = () => runCheckoutRefetches();
     window.addEventListener("checkout-success", onCheckout);
     return () => {
       window.removeEventListener("checkout-success", onCheckout);
       checkoutRefetchTimeoutsRef.current.forEach(clearTimeout);
       checkoutRefetchTimeoutsRef.current = [];
     };
-  }, [fetchTeams, fetchCountryUnlocks]);
+  }, [runCheckoutRefetches]);
+
+  // If user completed checkout in same tab (no popup), they navigate back to this page.
+  // sessionStorage is set by checkout-success; refetch when we mount or become visible.
+  useEffect(() => {
+    const checkRecentCheckout = () => {
+      try {
+        const raw = sessionStorage.getItem("checkout-success-at");
+        if (!raw) return;
+        const t = parseInt(raw, 10);
+        if (Number.isNaN(t) || Date.now() - t > 90000) return;
+        sessionStorage.removeItem("checkout-success-at");
+        runCheckoutRefetches();
+      } catch (_) {}
+    };
+    checkRecentCheckout();
+    const onVisible = () => checkRecentCheckout();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [runCheckoutRefetches]);
 
   // Countdown ticker for penalty timers: update timer DOM; when 0, remove timer and refetch
   useEffect(() => {

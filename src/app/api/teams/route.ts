@@ -34,7 +34,11 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(withPenalties);
+    return NextResponse.json(withPenalties, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   } catch (e) {
     console.error("Teams error:", e);
     return NextResponse.json(
