@@ -71,6 +71,8 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
   const gifSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [adminMenuMessageId, setAdminMenuMessageId] = useState<string | null>(null);
   const [adminActionLoading, setAdminActionLoading] = useState(false);
+  const [muteError, setMuteError] = useState<{ mutedUntil: string } | null>(null);
+  const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -110,7 +112,7 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
       channel.bind("chat-message", handler);
       const deletedHandler = (payload: { messageId?: string }) => {
         if (payload?.messageId) {
-          setMessages((prev) => prev.filter((m) => m.id !== payload.messageId));
+          setDeletedMessageIds((prev) => new Set([...prev, payload.messageId!]));
         }
       };
       const bulkDeletedHandler = (payload: { messageIds?: string[] }) => {
@@ -195,13 +197,40 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
 
   const isAdmin = !!session?.user?.isAdmin;
 
+  function formatMuteTimeLeft(mutedUntil: string): string {
+    const end = new Date(mutedUntil).getTime();
+    const now = Date.now();
+    if (end <= now) return "0 min";
+    const min = Math.ceil((end - now) / 60_000);
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+
+  // Clear muteError when mute has expired
+  useEffect(() => {
+    if (!muteError) return;
+    const end = new Date(muteError.mutedUntil).getTime();
+    if (end <= Date.now()) {
+      setMuteError(null);
+      return;
+    }
+    const t = setInterval(() => {
+      if (Date.now() >= end) {
+        setMuteError(null);
+      }
+    }, 10_000);
+    return () => clearInterval(t);
+  }, [muteError]);
+
   async function deleteMessage(messageId: string) {
     if (adminActionLoading) return;
     setAdminActionLoading(true);
     setAdminMenuMessageId(null);
     try {
       const res = await fetch(`/api/chat/${messageId}`, { method: "DELETE" });
-      if (res.ok) setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      if (res.ok) setDeletedMessageIds((prev) => new Set([...prev, messageId]));
     } finally {
       setAdminActionLoading(false);
     }
@@ -244,6 +273,7 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     setGifQuery("");
     setGifResults([]);
     setSending(true);
+    setMuteError(null);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -253,6 +283,9 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
       if (res.ok) {
         const newMsg = await res.json();
         setMessages((prev) => [...prev, newMsg]);
+      } else if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data.mutedUntil) setMuteError({ mutedUntil: data.mutedUntil });
       }
     } finally {
       setSending(false);
@@ -270,6 +303,7 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     if (!text || sending) return;
     setSending(true);
     setInput("");
+    setMuteError(null);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -279,6 +313,12 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
       if (res.ok) {
         const newMsg = await res.json();
         setMessages((prev) => [...prev, newMsg]);
+      } else if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        if (data.mutedUntil) setMuteError({ mutedUntil: data.mutedUntil });
+        setInput(text);
+      } else {
+        setInput(text);
       }
     } finally {
       setSending(false);
@@ -314,6 +354,12 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
           )}
           {messages.map((m) => (
             <li key={m.id} className="relative rounded-md bg-muted/50 px-2 py-1.5">
+              {deletedMessageIds.has(m.id) ? (
+                <p className="text-xs italic text-muted-foreground">
+                  See sõnum on administraatori poolt kustutatud.
+                </p>
+              ) : (
+                <>
               <div className="flex items-start justify-between gap-1">
                 <div>
                   <span className="font-medium text-muted-foreground">
@@ -405,9 +451,16 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
                   <p className="break-words">{m.body}</p>
                 )}
               </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
+        {muteError && (
+          <div className="shrink-0 border-t bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+            Sa oled vaikiv. Aega jäänud: {formatMuteTimeLeft(muteError.mutedUntil)}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="relative flex shrink-0 gap-2 border-t p-2">
           <div className="relative flex flex-1 items-center gap-1">
             <div className="relative" ref={emojiPopoverRef}>

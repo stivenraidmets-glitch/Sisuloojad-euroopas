@@ -119,7 +119,10 @@ export async function POST(req: Request) {
     const now = new Date();
     if (user.mutedUntil && user.mutedUntil > now) {
       return NextResponse.json(
-        { error: `Sa oled vaikiv kuni ${user.mutedUntil.toLocaleString("et-EE")}.` },
+        {
+          error: `Sa oled vaikiv kuni ${user.mutedUntil.toLocaleString("et-EE")}.`,
+          mutedUntil: user.mutedUntil.toISOString(),
+        },
         { status: 403 }
       );
     }
