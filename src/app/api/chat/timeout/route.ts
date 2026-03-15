@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE_DELETED } from "@/lib/pusher";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +50,37 @@ export async function POST(req: Request) {
   }
 
   const mutedUntil = new Date(Date.now() + minutes * 60 * 1000);
+  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000);
 
   try {
     await prisma.user.update({
       where: { id: userId },
       data: { mutedUntil },
     });
-    return NextResponse.json({ ok: true, mutedUntil: mutedUntil.toISOString() });
+
+    const recentMessages = await prisma.chatMessage.findMany({
+      where: { userId, createdAt: { gte: fifteenMinAgo } },
+      select: { id: true },
+    });
+    const messageIds = recentMessages.map((m) => m.id);
+    if (messageIds.length > 0) {
+      await prisma.chatMessage.deleteMany({
+        where: { id: { in: messageIds } },
+      });
+      try {
+        for (const messageId of messageIds) {
+          await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE_DELETED, {
+            messageId,
+          });
+        }
+      } catch (_) {}
+    }
+
+    return NextResponse.json({
+      ok: true,
+      mutedUntil: mutedUntil.toISOString(),
+      deletedCount: messageIds.length,
+    });
   } catch (e) {
     console.error("Chat timeout error:", e);
     return NextResponse.json({ error: "Failed to timeout user" }, { status: 500 });
