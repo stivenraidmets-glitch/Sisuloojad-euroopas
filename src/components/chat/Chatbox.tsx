@@ -112,7 +112,7 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
       channel.bind("chat-message", handler);
       const deletedHandler = (payload: { messageId?: string }) => {
         if (payload?.messageId) {
-          setDeletedMessageIds((prev) => new Set([...prev, payload.messageId!]));
+          setDeletedMessageIds((prev) => new Set(Array.from(prev).concat(payload.messageId!)));
         }
       };
       const bulkDeletedHandler = (payload: { messageIds?: string[] }) => {
@@ -230,7 +230,7 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     setAdminMenuMessageId(null);
     try {
       const res = await fetch(`/api/chat/${messageId}`, { method: "DELETE" });
-      if (res.ok) setDeletedMessageIds((prev) => new Set([...prev, messageId]));
+      if (res.ok) setDeletedMessageIds((prev) => new Set(Array.from(prev).concat(messageId)));
     } finally {
       setAdminActionLoading(false);
     }
