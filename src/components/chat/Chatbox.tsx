@@ -97,10 +97,11 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
       });
       const channel = pusher.subscribe("race");
       const handler = (payload: { id?: string; body?: string; userName?: string; createdAt?: string }) => {
-        if (!payload?.id) return;
+        const id = payload?.id;
+        if (!id) return;
         setMessages((prev) => {
-          if (prev.some((m) => m.id === payload.id)) return prev;
-          return [...prev, { id: payload.id, body: payload.body ?? "", userName: payload.userName ?? "", createdAt: payload.createdAt ?? new Date().toISOString() }];
+          if (prev.some((m) => m.id === id)) return prev;
+          return [...prev, { id, body: payload.body ?? "", userName: payload.userName ?? "", createdAt: payload.createdAt ?? new Date().toISOString() }];
         });
       };
       channel.bind("chat-message", handler);
