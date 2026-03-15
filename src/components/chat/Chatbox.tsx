@@ -84,12 +84,38 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     } catch (_) {}
   }, []);
 
+  // Initial load and fallback polling (every 30s); real-time via Pusher below
   useEffect(() => {
     if (status !== "authenticated") return;
     fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
+    const interval = setInterval(fetchMessages, 30000);
     return () => clearInterval(interval);
   }, [status, fetchMessages]);
+
+  // Real-time new messages via Pusher (scales to many users without polling)
+  useEffect(() => {
+    if (status !== "authenticated" || !process.env.NEXT_PUBLIC_PUSHER_KEY) return;
+    let cleanup: (() => void) | undefined;
+    import("pusher-js").then(({ default: Pusher }) => {
+      const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "eu",
+      });
+      const channel = pusher.subscribe("race");
+      const handler = (payload: { id?: string; body?: string; userName?: string; createdAt?: string }) => {
+        if (!payload?.id) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === payload.id)) return prev;
+          return [...prev, { id: payload.id, body: payload.body ?? "", userName: payload.userName ?? "", createdAt: payload.createdAt ?? new Date().toISOString() }];
+        });
+      };
+      channel.bind("chat-message", handler);
+      cleanup = () => {
+        channel.unbind("chat-message", handler);
+        pusher.unsubscribe("race");
+      };
+    });
+    return () => cleanup?.();
+  }, [status]);
 
   useEffect(() => {
     const el = messagesEndRef.current;

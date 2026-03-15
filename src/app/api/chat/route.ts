@@ -3,11 +3,28 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getOrCreateSystemUser } from "@/lib/chat-notify";
+import { pusherServer, PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE } from "@/lib/pusher";
 
 export const dynamic = "force-dynamic";
 
 const MAX_BODY_LENGTH = 800; // allow long GIF URLs (Giphy, Tenor, etc.)
 const MAX_MESSAGES = 100;
+
+// Per-user rate limit: max 30 messages per minute (per serverless instance)
+const CHAT_RATE_LIMIT_PER_MIN = 30;
+const chatRateLimitMap = new Map<string, number[]>();
+
+function isChatRateLimited(email: string): boolean {
+  const key = email.toLowerCase().trim();
+  const now = Date.now();
+  const windowMs = 60_000;
+  let times = chatRateLimitMap.get(key) ?? [];
+  times = times.filter((t) => now - t < windowMs);
+  if (times.length >= CHAT_RATE_LIMIT_PER_MIN) return true;
+  times.push(now);
+  chatRateLimitMap.set(key, times);
+  return false;
+}
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -46,6 +63,15 @@ export async function POST(req: Request) {
   }
 
   try {
+    const email = session.user.email.toLowerCase().trim();
+    const isAdmin = ADMIN_EMAILS.includes(email);
+    if (!isAdmin && isChatRateLimited(email)) {
+      return NextResponse.json(
+        { error: "Liiga palju sõnumeid. Oota hetk." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const text = typeof body.body === "string" ? body.body.trim().slice(0, MAX_BODY_LENGTH) : "";
     if (!text) {
@@ -69,12 +95,16 @@ export async function POST(req: Request) {
         },
         include: { user: { select: { email: true, name: true } } },
       });
-      return NextResponse.json({
+      const payload = {
         id: systemMsg.id,
         body: systemMsg.body,
         userName: systemMsg.user.name?.trim() || systemMsg.user.email,
         createdAt: systemMsg.createdAt.toISOString(),
-      });
+      };
+      try {
+        await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE, payload);
+      } catch (_) {}
+      return NextResponse.json(payload);
     }
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
@@ -84,12 +114,16 @@ export async function POST(req: Request) {
       data: { userId: user.id, body: text },
       include: { user: { select: { email: true, name: true } } },
     });
-    return NextResponse.json({
+    const payload = {
       id: message.id,
       body: message.body,
       userName: message.user.name?.trim() || message.user.email,
       createdAt: message.createdAt.toISOString(),
-    });
+    };
+    try {
+      await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE, payload);
+    } catch (_) {}
+    return NextResponse.json(payload);
   } catch (e) {
     console.error("Chat POST error:", e);
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
