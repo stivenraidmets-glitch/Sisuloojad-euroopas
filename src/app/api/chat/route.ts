@@ -104,7 +104,9 @@ export async function POST(req: Request) {
       };
       try {
         await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE, payload);
-      } catch (_) {}
+      } catch (pusherErr) {
+        console.error("Chat: Pusher trigger failed (admin message was saved).", pusherErr);
+      }
       return NextResponse.json(payload);
     }
 
@@ -139,7 +141,9 @@ export async function POST(req: Request) {
     };
     try {
       await pusherServer.trigger(PUSHER_CHANNEL, PUSHER_EVENT_CHAT_MESSAGE, payload);
-    } catch (_) {}
+    } catch (pusherErr) {
+      console.error("Chat: Pusher trigger failed (message was saved). Check PUSHER_* env vars.", pusherErr);
+    }
     return NextResponse.json(payload);
   } catch (e) {
     console.error("Chat POST error:", e);

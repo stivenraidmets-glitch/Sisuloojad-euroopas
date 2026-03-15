@@ -84,13 +84,14 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     } catch (_) {}
   }, []);
 
-  // Initial load and fallback polling (every 30s); real-time via Pusher below
+  // Initial load and fallback polling. If Pusher key is missing, poll every 5s; else 30s (Pusher does real-time).
+  const pollIntervalMs = typeof process.env.NEXT_PUBLIC_PUSHER_KEY === "string" && process.env.NEXT_PUBLIC_PUSHER_KEY.length > 0 ? 30000 : 5000;
   useEffect(() => {
     if (status !== "authenticated") return;
     fetchMessages();
-    const interval = setInterval(fetchMessages, 30000);
+    const interval = setInterval(fetchMessages, pollIntervalMs);
     return () => clearInterval(interval);
-  }, [status, fetchMessages]);
+  }, [status, fetchMessages, pollIntervalMs]);
 
   // Real-time new messages via Pusher (scales to many users without polling)
   useEffect(() => {
