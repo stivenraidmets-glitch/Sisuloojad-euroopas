@@ -6,6 +6,11 @@ import { prisma } from "./db";
 
 const isDevLoginEnabled = process.env.ENABLE_DEV_LOGIN === "1";
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 function getResendApiKey(): string | null {
   const server = process.env.EMAIL_SERVER?.trim();
   if (!server) return null;
@@ -150,6 +155,7 @@ export const authOptions: NextAuthOptions = {
         token.email = dbUser.email;
         token.name = dbUser.name ?? null;
         token.hasSpunWheel = dbUser.hasSpunWheel;
+        token.isAdmin = ADMIN_EMAILS.includes(dbUser.email.toLowerCase());
       }
       return token;
     },
@@ -158,6 +164,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as { id?: string }).id = token.userId as string;
         (session.user as { hasSpunWheel?: boolean }).hasSpunWheel = token.hasSpunWheel as boolean;
         (session.user as { name?: string | null }).name = (token.name as string | null) ?? null;
+        (session.user as { isAdmin?: boolean }).isAdmin = token.isAdmin as boolean;
       }
       return session;
     },

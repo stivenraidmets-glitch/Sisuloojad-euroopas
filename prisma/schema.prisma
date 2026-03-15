@@ -11,22 +11,24 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  emailVerified  DateTime?
-  name           String?
-  image          String?
-  createdAt      DateTime  @default(now())
-  creditsBalance     Int       @default(0)
-  freePenaltyBalance Int       @default(0) // free punishments user can redeem
-  hasSpunWheel       Boolean   @default(false)
-  accounts           Account[]
-  sessions       Session[]
-  votes          Vote[]
-  purchases      Purchase[]
-  penaltiesBought Penalty[]  @relation("PurchasedBy")
-  wheelSpin      WheelSpin?
-  chatMessages   ChatMessage[]
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  emailVerified       DateTime?
+  name                String?
+  image               String?
+  createdAt           DateTime  @default(now())
+  creditsBalance      Int       @default(0)
+  freePenaltyBalance  Int       @default(0) // free punishments user can redeem
+  hasSpunWheel        Boolean   @default(false)
+  mutedUntil          DateTime? // chat timeout; cannot send until this time
+  bannedFromChatAt    DateTime? // if set, user is banned from chat; all messages deleted
+  accounts            Account[]
+  sessions            Session[]
+  votes               Vote[]
+  purchases           Purchase[]
+  penaltiesBought      Penalty[]  @relation("PurchasedBy")
+  wheelSpin           WheelSpin?
+  chatMessages        ChatMessage[]
 }
 
 model ChatMessage {

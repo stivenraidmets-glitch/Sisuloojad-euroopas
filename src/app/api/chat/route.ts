@@ -45,6 +45,7 @@ export async function GET() {
     return NextResponse.json(
       messages.map((m) => ({
         id: m.id,
+        userId: m.userId,
         body: m.body,
         userName: m.user.name?.trim() || m.user.email,
         createdAt: m.createdAt.toISOString(),
@@ -107,8 +108,21 @@ export async function POST(req: Request) {
       return NextResponse.json(payload);
     }
 
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, mutedUntil: true, bannedFromChatAt: true },
+    });
     if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (user.bannedFromChatAt) {
+      return NextResponse.json({ error: "Sa oled vestlusest keelatud." }, { status: 403 });
+    }
+    const now = new Date();
+    if (user.mutedUntil && user.mutedUntil > now) {
+      return NextResponse.json(
+        { error: `Sa oled vaikiv kuni ${user.mutedUntil.toLocaleString("et-EE")}.` },
+        { status: 403 }
+      );
+    }
 
     const message = await prisma.chatMessage.create({
       data: { userId: user.id, body: text },

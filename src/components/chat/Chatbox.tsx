@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Send, MessageCircle, Smile, ImageIcon } from "lucide-react";
+import { Send, MessageCircle, Smile, ImageIcon, MoreVertical, Trash2, Ban, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -44,6 +44,7 @@ const EMOJI_LIST = [
 
 type ChatMessage = {
   id: string;
+  userId?: string;
   body: string;
   userName: string;
   createdAt: string;
@@ -68,6 +69,8 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
   const emojiPopoverRef = useRef<HTMLDivElement>(null);
   const gifPopoverRef = useRef<HTMLDivElement>(null);
   const gifSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [adminMenuMessageId, setAdminMenuMessageId] = useState<string | null>(null);
+  const [adminActionLoading, setAdminActionLoading] = useState(false);
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -105,8 +108,23 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
         });
       };
       channel.bind("chat-message", handler);
+      const deletedHandler = (payload: { messageId?: string }) => {
+        if (payload?.messageId) {
+          setMessages((prev) => prev.filter((m) => m.id !== payload.messageId));
+        }
+      };
+      const bulkDeletedHandler = (payload: { messageIds?: string[] }) => {
+        if (Array.isArray(payload?.messageIds) && payload.messageIds.length > 0) {
+          const set = new Set(payload.messageIds);
+          setMessages((prev) => prev.filter((m) => !set.has(m.id)));
+        }
+      };
+      channel.bind("chat-message-deleted", deletedHandler);
+      channel.bind("chat-messages-deleted", bulkDeletedHandler);
       cleanup = () => {
         channel.unbind("chat-message", handler);
+        channel.unbind("chat-message-deleted", deletedHandler);
+        channel.unbind("chat-messages-deleted", bulkDeletedHandler);
         pusher.unsubscribe("race");
       };
     });
@@ -174,6 +192,51 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
       }
     };
   }, [gifOpen, gifQuery]);
+
+  const isAdmin = !!session?.user?.isAdmin;
+
+  async function deleteMessage(messageId: string) {
+    if (adminActionLoading) return;
+    setAdminActionLoading(true);
+    setAdminMenuMessageId(null);
+    try {
+      const res = await fetch(`/api/chat/${messageId}`, { method: "DELETE" });
+      if (res.ok) setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } finally {
+      setAdminActionLoading(false);
+    }
+  }
+
+  async function timeoutUser(userId: string, duration: string) {
+    if (adminActionLoading || !userId) return;
+    setAdminActionLoading(true);
+    setAdminMenuMessageId(null);
+    try {
+      await fetch("/api/chat/timeout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, duration }),
+      });
+    } finally {
+      setAdminActionLoading(false);
+    }
+  }
+
+  async function banUser(userId: string) {
+    if (adminActionLoading || !userId) return;
+    setAdminActionLoading(true);
+    setAdminMenuMessageId(null);
+    try {
+      await fetch("/api/chat/ban", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      // Pusher chat-messages-deleted will remove messages live for all clients
+    } finally {
+      setAdminActionLoading(false);
+    }
+  }
 
   async function sendGif(gifUrl: string) {
     if (sending) return;
@@ -250,16 +313,79 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
             </li>
           )}
           {messages.map((m) => (
-            <li key={m.id} className="rounded-md bg-muted/50 px-2 py-1.5">
-              <span className="font-medium text-muted-foreground">
-                {m.userName}
-              </span>
-              <span className="ml-1.5 text-xs text-muted-foreground">
-                {new Date(m.createdAt).toLocaleTimeString("et-EE", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
+            <li key={m.id} className="relative rounded-md bg-muted/50 px-2 py-1.5">
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <span className="font-medium text-muted-foreground">
+                    {m.userName}
+                  </span>
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    {new Date(m.createdAt).toLocaleTimeString("et-EE", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                {isAdmin && (
+                  <div className="relative shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => setAdminMenuMessageId((id) => (id === m.id ? null : m.id))}
+                      aria-label="Admin"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                    {adminMenuMessageId === m.id && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          aria-hidden
+                          onClick={() => setAdminMenuMessageId(null)}
+                        />
+                        <div className="absolute right-0 top-full z-50 mt-0.5 min-w-[160px] rounded border bg-card py-1 shadow-lg">
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted"
+                            onClick={() => deleteMessage(m.id)}
+                            disabled={adminActionLoading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Kustuta sõnum
+                          </button>
+                          <div className="my-1 border-t px-2 py-1 text-xs font-medium text-muted-foreground">
+                            Vaikiv (timeout)
+                          </div>
+                          {["1", "5", "15", "45", "60", "180", "1440", "lifetime"].map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1 text-left text-xs hover:bg-muted"
+                              onClick={() => m.userId && timeoutUser(m.userId, d)}
+                              disabled={adminActionLoading || !m.userId}
+                            >
+                              <Clock className="h-3 w-3" />
+                              {d === "1" ? "1 min" : d === "60" ? "1 h" : d === "180" ? "3 h" : d === "1440" ? "24 h" : d === "lifetime" ? "Igavesti" : `${d} min`}
+                            </button>
+                          ))}
+                          <div className="my-1 border-t" />
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-destructive hover:bg-destructive/10"
+                            onClick={() => m.userId && banUser(m.userId)}
+                            disabled={adminActionLoading || !m.userId}
+                          >
+                            <Ban className="h-4 w-4" />
+                            Keela vestlus
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="mt-0.5">
                 {isGifUrl(m.body) ? (
                   <a

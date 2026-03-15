@@ -15,3 +15,5 @@ export const PUSHER_EVENT_PENALTY = "penalty-update";
 export const PUSHER_EVENT_COUNTRY_UNLOCK = "country-unlock";
 export const PUSHER_EVENT_EVENT_TIMER = "event-timer-reset";
 export const PUSHER_EVENT_CHAT_MESSAGE = "chat-message";
+export const PUSHER_EVENT_CHAT_MESSAGE_DELETED = "chat-message-deleted";
+export const PUSHER_EVENT_CHAT_MESSAGES_DELETED = "chat-messages-deleted";

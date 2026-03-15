@@ -8,6 +8,7 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       hasSpunWheel?: boolean;
+      isAdmin?: boolean;
     };
   }
 }
@@ -16,5 +17,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     userId?: string;
     hasSpunWheel?: boolean;
+    isAdmin?: boolean;
   }
 }
