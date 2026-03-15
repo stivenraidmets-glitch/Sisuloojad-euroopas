@@ -102,12 +102,14 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
         cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? "eu",
       });
       const channel = pusher.subscribe("race");
-      const handler = (payload: { id?: string; body?: string; userName?: string; createdAt?: string }) => {
+      const handler = (payload: { id?: string; userId?: string; body?: string; userName?: string; createdAt?: string }) => {
         const id = payload?.id;
         if (!id) return;
+        const myId = (session?.user as { id?: string })?.id;
+        if (myId && payload.userId === myId) return;
         setMessages((prev) => {
           if (prev.some((m) => m.id === id)) return prev;
-          return [...prev, { id, body: payload.body ?? "", userName: payload.userName ?? "", createdAt: payload.createdAt ?? new Date().toISOString() }];
+          return [...prev, { id, userId: payload.userId, body: payload.body ?? "", userName: payload.userName ?? "", createdAt: payload.createdAt ?? new Date().toISOString() }];
         });
       };
       channel.bind("chat-message", handler);

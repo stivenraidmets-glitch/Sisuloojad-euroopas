@@ -135,6 +135,7 @@ export async function POST(req: Request) {
     });
     const payload = {
       id: message.id,
+      userId: message.userId,
       body: message.body,
       userName: message.user.name?.trim() || message.user.email,
       createdAt: message.createdAt.toISOString(),
