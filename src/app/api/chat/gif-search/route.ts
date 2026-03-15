@@ -7,18 +7,24 @@ const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
-  if (!q || q.length > 50) {
+  if (q && q.length > 50) {
     return NextResponse.json([]);
   }
   if (!GIPHY_API_KEY) {
     return NextResponse.json([]);
   }
   try {
-    const url = new URL("https://api.giphy.com/v1/gifs/search");
+    // No query = trending/popular GIFs; otherwise search
+    const isTrending = !q || q.length === 0;
+    const url = new URL(
+      isTrending
+        ? "https://api.giphy.com/v1/gifs/trending"
+        : "https://api.giphy.com/v1/gifs/search"
+    );
     url.searchParams.set("api_key", GIPHY_API_KEY);
-    url.searchParams.set("q", q);
     url.searchParams.set("limit", "12");
     url.searchParams.set("rating", "g");
+    if (!isTrending) url.searchParams.set("q", q);
     const res = await fetch(url.toString());
     if (!res.ok) return NextResponse.json([]);
     const data = (await res.json()) as {

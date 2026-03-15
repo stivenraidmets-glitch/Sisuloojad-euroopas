@@ -5,12 +5,6 @@ import { useSession } from "next-auth/react";
 import { Send, MessageCircle, Smile, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 const GIF_URL_HOSTS = [
   "giphy.com",
@@ -72,6 +66,7 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
   const messagesEndRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const emojiPopoverRef = useRef<HTMLDivElement>(null);
+  const gifPopoverRef = useRef<HTMLDivElement>(null);
   const gifSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -139,27 +134,38 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
     return () => document.removeEventListener("click", close, true);
   }, [emojiOpen]);
 
-  // GIF search with debounce
+  // Close GIF popover when clicking outside
+  useEffect(() => {
+    if (!gifOpen) return;
+    const close = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (gifPopoverRef.current && !gifPopoverRef.current.contains(target) && inputRef.current && !inputRef.current.contains(target)) {
+        setGifOpen(false);
+      }
+    };
+    document.addEventListener("click", close, true);
+    return () => document.removeEventListener("click", close, true);
+  }, [gifOpen]);
+
+  // GIF: when popover opens show trending; when user types, debounced search
   useEffect(() => {
     if (!gifOpen) return;
     const q = gifQuery.trim();
-    if (!q) {
-      setGifResults([]);
-      return;
-    }
     if (gifSearchTimeoutRef.current) clearTimeout(gifSearchTimeoutRef.current);
-    gifSearchTimeoutRef.current = setTimeout(async () => {
+    const doFetch = () => {
       setGifSearching(true);
-      try {
-        const res = await fetch(`/api/chat/gif-search?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        setGifResults(Array.isArray(data) ? data : []);
-      } catch {
-        setGifResults([]);
-      } finally {
-        setGifSearching(false);
-      }
-    }, 300);
+      const url = q ? `/api/chat/gif-search?q=${encodeURIComponent(q)}` : "/api/chat/gif-search";
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => setGifResults(Array.isArray(data) ? data : []))
+        .catch(() => setGifResults([]))
+        .finally(() => setGifSearching(false));
+    };
+    if (q) {
+      gifSearchTimeoutRef.current = setTimeout(doFetch, 300);
+    } else {
+      doFetch(); // trending when no query
+    }
     return () => {
       if (gifSearchTimeoutRef.current) {
         clearTimeout(gifSearchTimeoutRef.current);
@@ -320,74 +326,68 @@ export function Chatbox({ embedded }: ChatboxProps = {}) {
               disabled={sending}
             />
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
-            onClick={() => setGifOpen(true)}
-            title="Otsi GIF"
-            aria-label="Otsi GIF"
-          >
-            <ImageIcon className="h-5 w-5" />
-          </Button>
+          <div className="relative shrink-0" ref={gifPopoverRef}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              onClick={(e) => {
+                e.preventDefault();
+                setGifOpen((open) => !open);
+                if (!gifOpen) setGifQuery("");
+              }}
+              title="GIF"
+              aria-label="Vali GIF"
+            >
+              <ImageIcon className="h-5 w-5" />
+            </Button>
+            {gifOpen && (
+              <div className="absolute bottom-full right-0 z-50 mb-1 flex w-72 flex-col rounded-lg border bg-card shadow-lg">
+                <Input
+                  placeholder="Otsi GIF-i..."
+                  value={gifQuery}
+                  onChange={(e) => setGifQuery(e.target.value)}
+                  className="m-2 shrink-0"
+                  autoFocus
+                />
+                <div className="max-h-56 overflow-y-auto p-2 pt-0">
+                  {gifSearching && (
+                    <p className="py-4 text-center text-xs text-muted-foreground">Otsin...</p>
+                  )}
+                  {!gifSearching && !gifQuery.trim() && gifResults.length === 0 && (
+                    <p className="py-4 text-center text-xs text-muted-foreground">Laen...</p>
+                  )}
+                  {!gifSearching && gifQuery.trim() && gifResults.length === 0 && (
+                    <p className="py-4 text-center text-xs text-muted-foreground">Tulemusi ei leitud.</p>
+                  )}
+                  {!gifSearching && gifResults.length > 0 && (
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {gifResults.map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          className="overflow-hidden rounded border bg-muted/30 transition hover:opacity-90 focus:ring-2 focus:ring-ring"
+                          onClick={() => sendGif(g.url)}
+                        >
+                          <img
+                            src={g.url}
+                            alt={g.title || "GIF"}
+                            className="h-20 w-full object-cover"
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <Button type="submit" size="icon" disabled={sending || !input.trim()}>
             <Send className="h-4 w-4" />
           </Button>
         </form>
-
-        <Dialog
-          open={gifOpen}
-          onOpenChange={(open) => {
-            setGifOpen(open);
-            if (!open) {
-              setGifQuery("");
-              setGifResults([]);
-            }
-          }}
-        >
-          <DialogContent className="max-h-[85vh] max-w-md overflow-hidden flex flex-col" showClose={true}>
-            <DialogHeader>
-              <DialogTitle>Otsi GIF</DialogTitle>
-            </DialogHeader>
-            <Input
-              placeholder="Sisesta otsingusõna..."
-              value={gifQuery}
-              onChange={(e) => setGifQuery(e.target.value)}
-              className="mb-3"
-              autoFocus
-            />
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {gifSearching && (
-                <p className="py-4 text-center text-sm text-muted-foreground">Otsin...</p>
-              )}
-              {!gifSearching && gifQuery.trim() && gifResults.length === 0 && (
-                <p className="py-4 text-center text-sm text-muted-foreground">
-                  Tulemusi ei leitud. Proovi teist otsingut.
-                </p>
-              )}
-              {!gifSearching && gifResults.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {gifResults.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      className="overflow-hidden rounded-lg border bg-muted/30 transition hover:opacity-90 focus:ring-2 focus:ring-ring"
-                      onClick={() => sendGif(g.url)}
-                    >
-                      <img
-                        src={g.url}
-                        alt={g.title || "GIF"}
-                        className="h-24 w-full object-cover"
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </>
   );
