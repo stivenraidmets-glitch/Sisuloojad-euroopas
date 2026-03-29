@@ -8,9 +8,7 @@ import { RightPanel } from "@/components/layout/RightPanel";
 const RaceMap = nextDynamic(() => import("@/components/map/RaceMap").then((m) => ({ default: m.RaceMap })), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-[400px] flex-1 items-center justify-center rounded-lg bg-muted/30">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-    </div>
+    <div className="min-h-[400px] flex-1 rounded-lg bg-muted/20" aria-hidden />
   ),
 });
 

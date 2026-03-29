@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { AnimatedBackground } from "@/components/layout/AnimatedBackground";
+import { SiteLoadingGate } from "@/components/layout/SiteLoadingGate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,7 +22,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <AnimatedBackground />
-          <div className="flex h-screen flex-col md:flex-row">{children}</div>
+          <SiteLoadingGate>
+            <div className="flex h-screen flex-col md:flex-row">{children}</div>
+          </SiteLoadingGate>
         </Providers>
       </body>
     </html>
