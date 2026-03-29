@@ -1,4 +1,4 @@
-// Paris → Tallinn Race - Prisma schema
+// Sisuloojad Euroopas - Prisma schema
 // PostgreSQL (Neon, etc.). Set DATABASE_URL in Vercel and locally.
 
 generator client {

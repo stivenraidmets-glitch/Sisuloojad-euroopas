@@ -1,6 +1,6 @@
-# Paris → Tallinn Race (No Money)
+# Sisuloojad Euroopas
 
-Production-ready web app for a YouTube event: two teams race Paris → Tallinn; viewers see approximate locations on a map, vote, buy penalties (distractions), and spin a wheel.
+Production-ready web app for a YouTube event: teams across Europe; viewers see approximate locations on a map, vote, buy penalties (distractions), and spin a wheel.
 
 **New to this?** → **[QUICKSTART.md](./QUICKSTART.md)** – run the app on your computer in a few minutes.  
 **Want it live on the internet?** → **[GET-IT-ONLINE.md](./GET-IT-ONLINE.md)** – free hosting (Vercel + Neon), no server, no experience needed.

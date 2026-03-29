@@ -1,4 +1,4 @@
-# Paris → Tallinn Race – Project File Tree
+# Sisuloojad Euroopas – Project File Tree
 
 ```
 euroopa-website/

@@ -68,7 +68,7 @@ export default async function HomePage() {
     console.error("Home page data error:", e);
     return (
       <div className="container space-y-6 px-4 py-12">
-        <h1 className="text-2xl font-bold">Alustame Nullist · Pariis – Tallinn</h1>
+        <h1 className="text-2xl font-bold">Sisuloojad Euroopas</h1>
         <p className="text-muted-foreground">
           Andmebaas pole hetkel saadaval. Kontrolli Vercel-is, et DATABASE_URL on õige ja andmebaas on üleval.
         </p>

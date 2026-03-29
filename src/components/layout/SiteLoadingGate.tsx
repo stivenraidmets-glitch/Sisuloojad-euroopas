@@ -46,9 +46,11 @@ export function SiteLoadingGate({ children }: SiteLoadingGateProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
                 >
-                  Alustame Nullist
+                  Sisuloojad Euroopas
                 </motion.div>
-                <p className="text-sm text-muted-foreground md:text-base">Pariis – Tallinn</p>
+                <p className="text-sm text-muted-foreground md:text-base">
+                  Jälgi tiime kaardil reaalajas
+                </p>
                 <div className="h-1 w-48 overflow-hidden rounded-full bg-muted">
                   <motion.div
                     className="h-full rounded-full bg-primary"

@@ -57,7 +57,7 @@ export async function GET() {
       body: JSON.stringify({
         from,
         to: email,
-        subject: "Resend test – Alustame Nullist",
+        subject: "Resend test – Sisuloojad Euroopas",
         html: "<p>See on test. E-mail töötab!</p>",
       }),
     });

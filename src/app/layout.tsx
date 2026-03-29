@@ -8,8 +8,9 @@ import { SiteLoadingGate } from "@/components/layout/SiteLoadingGate";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Alustame Nullist · Pariis – Tallinn",
-  description: "4 sisuloojat alustavad võistlusega Pariisist. Jälgi tiime kaardil reaalajas, hääleta, osta karistusi ja keeruta loosratast.",
+  title: "Sisuloojad Euroopas",
+  description:
+    "Sisuloojad Euroopas – jälgi tiime kaardil reaalajas, hääleta, osta karistusi ja keeruta loosratast.",
 };
 
 export default function RootLayout({
