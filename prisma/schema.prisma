@@ -22,6 +22,7 @@ model User {
   hasSpunWheel        Boolean   @default(false)
   mutedUntil          DateTime? // chat timeout; cannot send until this time
   bannedFromChatAt    DateTime? // if set, user is banned from chat; all messages deleted
+  passwordHash        String? // bcrypt hash for email+password login
   accounts            Account[]
   sessions            Session[]
   votes               Vote[]
